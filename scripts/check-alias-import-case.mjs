@@ -4,21 +4,48 @@ import path from 'node:path';
 
 const repoRoot = process.cwd();
 const aliasRoot = 'resources/js';
-function readTrackedFiles() {
-    return execFileSync(
-        'git',
-        ['-c', `safe.directory=${repoRoot.replace(/\\/g, '/')}`, 'ls-files'],
-        {
-            cwd: repoRoot,
-            encoding: 'utf8',
-        },
-    );
+const aliasRootAbs = path.join(repoRoot, aliasRoot);
+
+function walkFiles(dirAbs, out) {
+    const entries = fs.readdirSync(dirAbs, { withFileTypes: true });
+    for (const entry of entries) {
+        const abs = path.join(dirAbs, entry.name);
+        if (entry.isDirectory()) {
+            walkFiles(abs, out);
+            continue;
+        }
+        if (!entry.isFile()) {
+            continue;
+        }
+        const rel = path.relative(repoRoot, abs).replace(/\\/g, '/');
+        out.push(rel);
+    }
 }
 
-const tracked = readTrackedFiles()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((p) => p.replace(/\\/g, '/'));
+function readAliasFiles() {
+    try {
+        return execFileSync(
+            'git',
+            ['-c', `safe.directory=${repoRoot.replace(/\\/g, '/')}`, 'ls-files', aliasRoot],
+            {
+                cwd: repoRoot,
+                encoding: 'utf8',
+            },
+        )
+            .split(/\r?\n/)
+            .filter(Boolean)
+            .map((p) => p.replace(/\\/g, '/'));
+    } catch {
+        if (!fs.existsSync(aliasRootAbs)) {
+            throw new Error(`Alias root not found: ${aliasRoot}`);
+        }
+        const files = [];
+        walkFiles(aliasRootAbs, files);
+        return files;
+    }
+}
+
+const tracked = readAliasFiles();
 
 const trackedSet = new Set(tracked);
 const byLower = new Map();
@@ -76,7 +103,7 @@ for (const file of sourceFiles) {
             const detail =
                 caseSuggestions.size > 0
                     ? `case mismatch, expected one of ${[...caseSuggestions].join(', ')}`
-                    : `target not found in tracked files`;
+                    : `target not found under ${aliasRoot}`;
             issues.push(`${file}: "@/` + `${cleanSpec}" -> ${detail}`);
         }
     }
