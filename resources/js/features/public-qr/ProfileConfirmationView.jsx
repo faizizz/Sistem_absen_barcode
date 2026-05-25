@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import {
-    ArrowRight,
     BriefcaseBusiness,
     Building2,
     ShieldCheck,
@@ -76,7 +75,6 @@ export function ProfileConfirmationView({
                         onClick={onConfirm}
                         aria-label="Buat QR code untuk profil saya"
                         className="w-full sm:flex-1"
-                        rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
                     >
                         Buat QR Code Saya
                     </Button>
