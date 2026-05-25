@@ -191,9 +191,11 @@ function OneTimeWarningDialog({ open, onAcknowledge }) {
             }
             description="Bacalah dengan teliti sebelum menutup dialog."
             footer={
-                <Button variant="primary" size="md" onClick={onAcknowledge}>
-                    Saya Mengerti, Simpan QR Saya
-                </Button>
+                <div className="flex w-full justify-center">
+                    <Button variant="primary" size="md" onClick={onAcknowledge}>
+                        Saya Mengerti, Simpan QR Saya
+                    </Button>
+                </div>
             }
         >
             <div className="space-y-3 text-sm leading-6 text-[color:var(--text-secondary)]">
