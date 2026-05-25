@@ -15,6 +15,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
         \App\Console\Commands\SyncEventLifecycle::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
