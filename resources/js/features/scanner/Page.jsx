@@ -11,7 +11,10 @@ import { beepSuccess, beepError } from '@/lib/audio';
 import {
     Camera,
     CameraOff,
+    ChevronDown,
+    ChevronUp,
     CheckCircle2,
+    Info,
     XCircle,
     ScanLine,
     SwitchCamera,
@@ -21,6 +24,8 @@ import {
 import { cn } from '@/lib/cn';
 
 const SCANNER_DOM_ID = 'qr-scanner-region';
+const TOP_SAFE_OFFSET = 'calc(env(safe-area-inset-top, 0px) + 10px)';
+const BOTTOM_SAFE_OFFSET = 'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 10px)';
 
 export default function ScannerPage({ activeEvents }) {
     const firstOpen = (activeEvents ?? []).find((e) => e.is_open_for_scan);
@@ -35,11 +40,14 @@ export default function ScannerPage({ activeEvents }) {
     const [cameras, setCameras] = useState([]);
     const [activeCameraId, setActiveCameraId] = useState(null);
     const [switching, setSwitching] = useState(false);
+    const [eventPanelOpen, setEventPanelOpen] = useState(false);
+    const [hintOpen, setHintOpen] = useState(false);
 
     const html5Ref = useRef(null);
     const submittingRef = useRef(false);
     const lastScanRef = useRef({ code: null, time: 0 });
     const eventIdRef = useRef(eventId);
+    const eventPanelRef = useRef(null);
 
     useEffect(() => {
         eventIdRef.current = eventId;
@@ -72,8 +80,39 @@ export default function ScannerPage({ activeEvents }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeEvents]);
 
+    useEffect(() => {
+        if (!eventPanelOpen) return undefined;
+
+        function onKeyDown(e) {
+            if (e.key === 'Escape') {
+                setEventPanelOpen(false);
+            }
+        }
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [eventPanelOpen]);
+
+    useEffect(() => {
+        if (!eventPanelOpen) return undefined;
+
+        function onPointerDown(e) {
+            const target = e.target instanceof Element ? e.target : null;
+            if (target?.closest('[data-headlessui-portal]')) {
+                return;
+            }
+            if (!eventPanelRef.current?.contains(e.target)) {
+                setEventPanelOpen(false);
+            }
+        }
+
+        window.addEventListener('pointerdown', onPointerDown);
+        return () => window.removeEventListener('pointerdown', onPointerDown);
+    }, [eventPanelOpen]);
+
     function handleEventChange(newId) {
         setEventId(newId);
+        setEventPanelOpen(false);
         // Verify status freshness right when admin picks an event, so
         // a stale "active" entry that just closed gets reflected.
         router.reload({
@@ -100,6 +139,27 @@ export default function ScannerPage({ activeEvents }) {
             }),
         [activeEvents],
     );
+
+    const selectedEvent = useMemo(() => {
+        const list = activeEvents ?? [];
+        return list.find((e) => e.id === eventId) ?? firstOpen ?? list[0] ?? null;
+    }, [activeEvents, eventId, firstOpen]);
+
+    const selectedEventState = useMemo(() => {
+        if (!selectedEvent) {
+            return { label: 'Tidak aktif', tone: 'neutral' };
+        }
+        if (selectedEvent.is_open_for_scan) {
+            return { label: 'Open', tone: 'success' };
+        }
+        if (selectedEvent.time_state === 'upcoming') {
+            return { label: 'Belum mulai', tone: 'warning' };
+        }
+        if (selectedEvent.time_state === 'ended') {
+            return { label: 'Berakhir', tone: 'danger' };
+        }
+        return { label: 'Nonaktif', tone: 'neutral' };
+    }, [selectedEvent]);
 
     // Init camera
     useEffect(() => {
@@ -303,7 +363,7 @@ export default function ScannerPage({ activeEvents }) {
             </div>
 
             {/* Top bar */}
-            <header className="absolute inset-x-0 top-0 z-30 flex flex-col gap-3 px-4 pt-[max(env(safe-area-inset-top),12px)] pb-3 sm:px-6">
+            <header className="absolute inset-x-0 z-30 px-4 sm:px-6" style={{ top: TOP_SAFE_OFFSET }}>
                 <div className="flex items-center justify-end gap-2">
                     <Badge tone={cameraReady ? 'success' : 'neutral'} dot={cameraReady} size="sm" className="bg-black/55 backdrop-blur-md">
                         {cameraReady ? 'Kamera Aktif' : 'Menunggu kamera'}
@@ -320,43 +380,107 @@ export default function ScannerPage({ activeEvents }) {
                     </button>
                 </div>
 
-                {/* Event picker */}
-                <div className="rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 backdrop-blur-md">
-                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/70">
-                        Event Aktif
-                    </p>
+                <div className="mt-2" ref={eventPanelRef}>
                     {noActiveEvents ? (
-                        <div className="flex items-center justify-between gap-3 py-1">
-                            <p className="text-xs text-white/80">Tidak ada event aktif.</p>
-                            <Button as={Link} href="/kuasa/events" size="xs" variant="primary">
-                                Kelola Event
-                            </Button>
+                        <div className="rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 backdrop-blur-md">
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-xs text-white/80">Tidak ada event aktif.</p>
+                                <Button as={Link} href="/kuasa/events" size="xs" variant="primary">
+                                    Kelola Event
+                                </Button>
+                            </div>
                         </div>
                     ) : (
-                        <Select
-                            value={eventId}
-                            onChange={handleEventChange}
-                            options={eventOptions}
-                            className="[&_button]:!bg-white/10 [&_button]:!text-white [&_button]:!border-white/20 [&_svg]:!text-white/70"
-                        />
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setEventPanelOpen((v) => !v)}
+                                aria-expanded={eventPanelOpen}
+                                aria-label="Buka panel event aktif"
+                                className="flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 text-left backdrop-blur-md"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/65">
+                                        Event Aktif
+                                    </p>
+                                    <p className="truncate text-sm font-medium text-white">
+                                        {selectedEvent?.nama_kegiatan ?? 'Pilih event'}
+                                    </p>
+                                </div>
+                                <Badge
+                                    tone={selectedEventState.tone}
+                                    size="sm"
+                                    className="bg-black/35 text-white border-white/20"
+                                >
+                                    {selectedEventState.label}
+                                </Badge>
+                                {eventPanelOpen ? (
+                                    <ChevronUp className="h-4 w-4 text-white/70" />
+                                ) : (
+                                    <ChevronDown className="h-4 w-4 text-white/70" />
+                                )}
+                            </button>
+
+                            <AnimatePresence>
+                                {eventPanelOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -8 }}
+                                        className="mt-2 rounded-[var(--radius-lg)] bg-black/65 p-3 backdrop-blur-md"
+                                    >
+                                        <p className="mb-2 text-[11px] text-white/75">Pilih event yang ingin discan</p>
+                                        <Select
+                                            value={eventId}
+                                            onChange={handleEventChange}
+                                            options={eventOptions}
+                                            className="[&_button]:!bg-white/10 [&_button]:!text-white [&_button]:!border-white/20 [&_svg]:!text-white/70"
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </>
                     )}
                 </div>
             </header>
 
             {/* Bottom bar */}
-            <footer className="absolute inset-x-0 z-30 flex flex-col items-center gap-3 px-4 pb-3 pt-3 bottom-16 md:bottom-0">
-                <p className="flex items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-xs text-white/85 backdrop-blur-md">
-                    <ScanLine className="h-3.5 w-3.5" />
-                    Arahkan QR ke tengah bingkai
-                </p>
+            <footer
+                className="absolute inset-x-0 z-30 flex flex-col items-center gap-2 px-4 pb-2 sm:px-6"
+                style={{ bottom: BOTTOM_SAFE_OFFSET }}
+            >
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setHintOpen((v) => !v)}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white/90 backdrop-blur-md hover:bg-black/70"
+                        aria-label="Tampilkan petunjuk scan"
+                        aria-expanded={hintOpen}
+                    >
+                        <Info className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => setManualOpen(true)}
+                        className="flex h-11 items-center gap-2 rounded-full bg-[color:var(--brand-600)] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--brand-700)] active:scale-[0.98]"
+                    >
+                        <Keyboard className="h-4 w-4" />
+                        Input Manual
+                    </button>
+                </div>
 
-                <button
-                    onClick={() => setManualOpen(true)}
-                    className="flex h-12 items-center gap-2 rounded-full bg-[color:var(--brand-600)] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--brand-700)] active:scale-[0.98]"
-                >
-                    <Keyboard className="h-4 w-4" />
-                    Input Manual
-                </button>
+                <AnimatePresence>
+                    {hintOpen && (
+                        <motion.p
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 8 }}
+                            className="flex items-center gap-2 rounded-full bg-black/55 px-4 py-1.5 text-[11px] text-white/85 backdrop-blur-md"
+                        >
+                            <ScanLine className="h-3.5 w-3.5" />
+                            Arahkan QR ke tengah bingkai
+                        </motion.p>
+                    )}
+                </AnimatePresence>
             </footer>
 
             {/* Last result toast (in-screen) */}
@@ -368,11 +492,16 @@ export default function ScannerPage({ activeEvents }) {
                         exit={{ opacity: 0, y: -16, scale: 0.95 }}
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                         className={cn(
-                            'pointer-events-none absolute left-1/2 top-24 z-30 w-[min(92vw,420px)] -translate-x-1/2 rounded-[var(--radius-lg)] border p-3 backdrop-blur-md sm:top-28',
+                            'pointer-events-none absolute left-1/2 z-30 w-[min(92vw,420px)] -translate-x-1/2 rounded-[var(--radius-lg)] border p-3 backdrop-blur-md',
                             lastResult.ok
                                 ? 'border-emerald-400/40 bg-emerald-500/30'
                                 : 'border-red-400/40 bg-red-500/30',
                         )}
+                        style={{
+                            top: eventPanelOpen
+                                ? 'calc(env(safe-area-inset-top, 0px) + 190px)'
+                                : 'calc(env(safe-area-inset-top, 0px) + 112px)',
+                        }}
                     >
                         <div className="flex items-start gap-2.5">
                             {lastResult.ok ? (

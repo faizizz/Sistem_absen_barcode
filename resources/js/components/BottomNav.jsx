@@ -30,6 +30,10 @@ export function BottomNav({ className }) {
                 'fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-raised)] md:hidden',
                 className,
             )}
+            style={{
+                height: 'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px))',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
         >
             {NAV.map((item) => {
                 const Icon = item.icon;
@@ -39,7 +43,7 @@ export function BottomNav({ className }) {
                         key={item.key}
                         href={item.href}
                         className={cn(
-                            'relative flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors duration-200',
+                            'relative flex h-[var(--shell-bottomnav-h)] flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-200',
                             active
                                 ? 'text-[color:var(--accent-700)] dark:text-[color:var(--accent-200)]'
                                 : 'text-[color:var(--text-muted)]',
