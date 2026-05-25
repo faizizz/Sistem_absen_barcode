@@ -3,7 +3,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { initTheme } from '@/lib/theme';
 import { installFlashBridge } from '@/lib/flash';
-import { ToastViewport } from '@/components/primitives/Toast';
+import { ToastViewport } from '@/Components/primitives/Toast';
 
 initTheme();
 installFlashBridge();
