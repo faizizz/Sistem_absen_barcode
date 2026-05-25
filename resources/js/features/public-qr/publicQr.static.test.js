@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
  *     in JSX. All colors must come from Design_Tokens via `var(--token)`
  *     or the project's Tailwind utilities.
  *   - Requirement 7.3 — This feature does NOT introduce any new files
- *     under `resources/js/Components/primitives/`. The redesign reuses
+ *     under `resources/js/components/primitives/`. The redesign reuses
  *     the existing `Button` and `Badge` primitives only.
  *   - Requirement 9.3 — `profile.<field>` references in the four source
  *     files only target fields in the allowlist
@@ -39,7 +39,7 @@ const PRIMITIVES_DIR = path.resolve(
     __dirname,
     '..',
     '..',
-    'Components',
+    'components',
     'primitives',
 );
 
@@ -87,7 +87,7 @@ describe('public-qr feature — static-source guardrails', () => {
         }
     });
 
-    describe('Requirement 7.3 — no new files under Components/primitives/', () => {
+    describe('Requirement 7.3 — no new files under components/primitives/', () => {
         it('the primitives directory exists at the expected path', () => {
             expect(
                 fs.existsSync(PRIMITIVES_DIR),

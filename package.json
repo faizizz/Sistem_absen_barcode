@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "check:case": "node scripts/check-alias-import-case.mjs",
+        "build": "npm run check:case && vite build",
         "test": "vitest --run"
     },
     "devDependencies": {
