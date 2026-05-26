@@ -5,6 +5,8 @@ import { Button } from '@/components/primitives/Button';
 import { Select } from '@/components/primitives/Select';
 import { Badge } from '@/components/primitives/Badge';
 import { Input } from '@/components/primitives/Input';
+import { Field } from '@/components/primitives/Field';
+import { Sheet } from '@/components/primitives/Sheet';
 import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -15,18 +17,19 @@ import {
     ChevronDown,
     ChevronUp,
     CheckCircle2,
-    Info,
     XCircle,
     ScanLine,
     SwitchCamera,
     Keyboard,
-    X as XIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const SCANNER_DOM_ID = 'qr-scanner-region';
+// Top inset clears notch + status bar plus a small breathing buffer.
 const TOP_SAFE_OFFSET = 'calc(env(safe-area-inset-top, 0px) + 10px)';
-const BOTTOM_SAFE_OFFSET = 'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 10px)';
+// Bottom inset clears the BottomNav and iOS home-indicator strip.
+const BOTTOM_SAFE_OFFSET =
+    'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 10px)';
 
 export default function ScannerPage({ activeEvents }) {
     const firstOpen = (activeEvents ?? []).find((e) => e.is_open_for_scan);
@@ -42,7 +45,6 @@ export default function ScannerPage({ activeEvents }) {
     const [activeCameraId, setActiveCameraId] = useState(null);
     const [switching, setSwitching] = useState(false);
     const [eventPanelOpen, setEventPanelOpen] = useState(false);
-    const [hintOpen, setHintOpen] = useState(false);
 
     const html5Ref = useRef(null);
     const submittingRef = useRef(false);
@@ -207,12 +209,13 @@ export default function ScannerPage({ activeEvents }) {
 
     async function startCamera(inst, camId) {
         const cameraConfig = camId ? { deviceId: { exact: camId } } : { facingMode: 'environment' };
-        // Responsive scan box: ~70% of the smaller viewport edge, capped at 360px.
-        // A larger box gives html5-qrcode more pixels to work with and dramatically
-        // improves decode success on phones where users hold the QR off-center.
+        // Responsive scan box: ~70% of the smaller viewport edge, capped at 320px.
+        // Slightly smaller than the previous 360px cap so the visual reticle
+        // (clamp(180px, 60vmin, 300px)) and the decode area both comfortably
+        // sit inside the safe zone between header and toolbar on tall phones.
         const qrbox = (viewW, viewH) => {
             const min = Math.min(viewW, viewH);
-            const size = Math.max(180, Math.min(360, Math.floor(min * 0.7)));
+            const size = Math.max(180, Math.min(320, Math.floor(min * 0.7)));
             return { width: size, height: size };
         };
         try {
@@ -348,9 +351,24 @@ export default function ScannerPage({ activeEvents }) {
                 )}
             </AnimatePresence>
 
-            {/* Reticle */}
-            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <div className="relative h-[min(70vw,320px)] w-[min(70vw,320px)]">
+            {/*
+              Reticle — sits inside a safe-zone band between the top header
+              and the bottom toolbar so it never overlaps either. The size
+              is clamp(180px, 60vmin, 300px), guaranteeing it fits even on
+              short phones (≤640px tall) while still feeling generous on
+              tablets and landscape.
+            */}
+            <div
+                className="pointer-events-none absolute inset-x-0 z-10 flex items-center justify-center px-4"
+                style={{
+                    top: 'calc(env(safe-area-inset-top, 0px) + 168px)',
+                    bottom: 'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 120px)',
+                }}
+            >
+                <div
+                    className="relative aspect-square"
+                    style={{ width: 'clamp(180px, 60vmin, 300px)' }}
+                >
                     <Corner className="-left-1 -top-1 border-l-2 border-t-2" />
                     <Corner className="-right-1 -top-1 border-r-2 border-t-2" />
                     <Corner className="-bottom-1 -left-1 border-b-2 border-l-2" />
@@ -445,46 +463,36 @@ export default function ScannerPage({ activeEvents }) {
                 </div>
             </header>
 
-            {/* Bottom bar */}
+            {/*
+              Bottom bar — single row (hint chip + manual button), centered.
+              The hint is now an inline chip (not a toggleable info dialog),
+              which removes one tap target and keeps everything on one line.
+            */}
             <footer
                 className="absolute inset-x-0 z-30 flex flex-col items-center gap-2 px-4 pb-2 sm:px-6"
                 style={{ bottom: BOTTOM_SAFE_OFFSET }}
             >
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setHintOpen((v) => !v)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white/90 backdrop-blur-md hover:bg-black/70"
-                        aria-label="Tampilkan petunjuk scan"
-                        aria-expanded={hintOpen}
-                    >
-                        <Info className="h-4 w-4" />
-                    </button>
-                    <button
-                        onClick={() => setManualOpen(true)}
-                        className="flex h-11 items-center gap-2 rounded-full bg-[color:var(--brand-600)] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--brand-700)] active:scale-[0.98]"
-                    >
-                        <Keyboard className="h-4 w-4" />
-                        Input Manual
-                    </button>
-                </div>
-
-                <AnimatePresence>
-                    {hintOpen && (
-                        <motion.p
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 8 }}
-                            className="flex items-center gap-2 rounded-full bg-black/55 px-4 py-1.5 text-[11px] text-white/85 backdrop-blur-md"
-                        >
-                            <ScanLine className="h-3.5 w-3.5" />
-                            Arahkan QR ke tengah bingkai
-                        </motion.p>
-                    )}
-                </AnimatePresence>
+                <p className="inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white/85 backdrop-blur-md">
+                    <ScanLine className="h-3.5 w-3.5" />
+                    Arahkan QR ke tengah bingkai
+                </p>
+                <button
+                    onClick={() => setManualOpen(true)}
+                    className="flex h-11 items-center gap-2 rounded-full bg-[color:var(--brand-600)] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--brand-700)] active:scale-[0.98]"
+                >
+                    <Keyboard className="h-4 w-4" />
+                    Input Manual
+                </button>
             </footer>
 
-            {/* Last result toast (in-screen) */}
+            {/*
+              Last result toast.
+              Positioned with `clamp()` so it always sits in the gap between
+              the header and the reticle, regardless of whether the event
+              panel is expanded or which device the admin is on. Max width
+              is capped to 92vw so on tablets it stays a focused chip rather
+              than stretching across the camera view.
+            */}
             <AnimatePresence>
                 {lastResult && (
                     <motion.div
@@ -499,9 +507,7 @@ export default function ScannerPage({ activeEvents }) {
                                 : 'border-red-400/40 bg-red-500/30',
                         )}
                         style={{
-                            top: eventPanelOpen
-                                ? 'calc(env(safe-area-inset-top, 0px) + 190px)'
-                                : 'calc(env(safe-area-inset-top, 0px) + 112px)',
+                            top: 'calc(env(safe-area-inset-top, 0px) + 124px)',
                         }}
                     >
                         <div className="flex items-start gap-2.5">
@@ -532,121 +538,111 @@ export default function ScannerPage({ activeEvents }) {
                 )}
             </AnimatePresence>
 
-            {/* Manual input sheet */}
-            <AnimatePresence>
-                {manualOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-40 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center"
-                        onClick={() => setManualOpen(false)}
+            {/*
+              Manual input — now uses the project-wide Sheet primitive so the
+              animation, focus trap, and keyboard handling match dialogs in
+              the rest of the app (event detail, dashboard, members).
+            */}
+            <Sheet
+                open={manualOpen}
+                onClose={() => setManualOpen(false)}
+                side="bottom"
+                title="Input Manual"
+                description="Pakai mode QR untuk paste token atau NIM untuk fallback."
+            >
+                <form onSubmit={submitManual} className="space-y-4">
+                    <div
+                        role="tablist"
+                        aria-label="Mode input manual"
+                        className="grid grid-cols-2 gap-1 rounded-[var(--radius-md)] bg-[color:var(--surface-base)] p-1"
                     >
-                        <motion.form
-                            onSubmit={submitManual}
-                            initial={{ y: 40, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 40, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[color:var(--surface-raised)] p-5 text-[color:var(--text-primary)] sm:rounded-[var(--radius-xl)]"
-                        >
-                            <div className="mb-3 flex items-center justify-between">
-                                <h3 className="text-base font-semibold tracking-tight">Input Manual</h3>
-                                <button
-                                    type="button"
-                                    onClick={() => setManualOpen(false)}
-                                    className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[color:var(--text-muted)] hover:bg-[color:var(--surface-base)]"
-                                    aria-label="Tutup"
-                                >
-                                    <XIcon className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            <div
-                                role="tablist"
-                                aria-label="Mode input manual"
-                                className="mb-3 grid grid-cols-2 gap-1 rounded-[var(--radius-md)] bg-[color:var(--surface-base)] p-1"
-                            >
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={manualMode === 'qr'}
-                                    onClick={() => setManualMode('qr')}
-                                    className={cn(
-                                        'rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition',
-                                        manualMode === 'qr'
-                                            ? 'bg-[color:var(--brand-600)] text-white shadow-sm'
-                                            : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
-                                    )}
-                                >
-                                    Kode QR
-                                </button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={manualMode === 'nim'}
-                                    onClick={() => setManualMode('nim')}
-                                    className={cn(
-                                        'rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition',
-                                        manualMode === 'nim'
-                                            ? 'bg-[color:var(--brand-600)] text-white shadow-sm'
-                                            : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
-                                    )}
-                                >
-                                    NIM
-                                </button>
-                            </div>
-
-                            {manualMode === 'qr' ? (
-                                <>
-                                    <p className="mb-3 text-xs text-[color:var(--text-muted)]">
-                                        Tempel kode QR jika kamera tidak bisa membaca.
-                                    </p>
-                                    <Input
-                                        value={manualCode}
-                                        onChange={(e) => setManualCode(e.target.value)}
-                                        placeholder="qr-token-…"
-                                        className="font-mono text-sm"
-                                        autoFocus
-                                    />
-                                </>
-                            ) : (
-                                <>
-                                    <p className="mb-3 text-xs text-[color:var(--text-muted)]">
-                                        Ketik NIM mahasiswa (digit). Gunakan kalau anggota tidak bawa QR.
-                                    </p>
-                                    <Input
-                                        value={manualNim}
-                                        onChange={(e) => setManualNim(e.target.value.replace(/[^0-9]/g, ''))}
-                                        placeholder="0000000001"
-                                        inputMode="numeric"
-                                        autoComplete="off"
-                                        className="font-mono text-sm tracking-wider"
-                                        autoFocus
-                                    />
-                                </>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={manualMode === 'qr'}
+                            onClick={() => setManualMode('qr')}
+                            className={cn(
+                                'rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition',
+                                manualMode === 'qr'
+                                    ? 'bg-[color:var(--brand-600)] text-white shadow-sm'
+                                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
                             )}
-                            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                                <Button type="button" variant="ghost" onClick={() => setManualOpen(false)} fullWidth>
-                                    Batal
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={
-                                        !eventId ||
-                                        (manualMode === 'qr' ? !manualCode.trim() : !manualNim.trim())
-                                    }
-                                    fullWidth
-                                >
-                                    Submit
-                                </Button>
-                            </div>
-                        </motion.form>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        >
+                            Kode QR
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={manualMode === 'nim'}
+                            onClick={() => setManualMode('nim')}
+                            className={cn(
+                                'rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition',
+                                manualMode === 'nim'
+                                    ? 'bg-[color:var(--brand-600)] text-white shadow-sm'
+                                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
+                            )}
+                        >
+                            NIM
+                        </button>
+                    </div>
+
+                    {manualMode === 'qr' ? (
+                        <Field
+                            label="Kode QR"
+                            hint="Tempel kode QR jika kamera tidak bisa membaca."
+                            htmlFor="manual-qr-input"
+                        >
+                            <Input
+                                id="manual-qr-input"
+                                value={manualCode}
+                                onChange={(e) => setManualCode(e.target.value)}
+                                placeholder="qr-token-…"
+                                className="font-mono text-sm"
+                                autoFocus
+                            />
+                        </Field>
+                    ) : (
+                        <Field
+                            label="NIM Mahasiswa"
+                            hint="Ketik NIM (digit). Gunakan kalau anggota tidak bawa QR."
+                            htmlFor="manual-nim-input"
+                        >
+                            <Input
+                                id="manual-nim-input"
+                                value={manualNim}
+                                onChange={(e) => setManualNim(e.target.value.replace(/[^0-9]/g, ''))}
+                                placeholder="0000000001"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                className="font-mono text-sm tracking-wider"
+                                autoFocus
+                            />
+                        </Field>
+                    )}
+
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setManualOpen(false)}
+                            fullWidth
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={
+                                !eventId ||
+                                (manualMode === 'qr' ? !manualCode.trim() : !manualNim.trim())
+                            }
+                            fullWidth
+                        >
+                            Submit
+                        </Button>
+                    </div>
+                </form>
+            </Sheet>
         </div>
     );
 }
