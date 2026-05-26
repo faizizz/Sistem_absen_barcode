@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/primitives/Button';
 import { BottomNav } from '@/components/BottomNav';
 import { ScrollToBottomButton } from '@/components/primitives/ScrollToBottomButton';
+import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { toggleTheme } from '@/lib/theme';
 import {
     LayoutDashboard,
@@ -109,9 +110,9 @@ export function AdminShell({ children, title, eyebrow, description, actions, ful
 
                 <div className="border-t border-[color:var(--border-subtle)] p-3">
                     <div className="rounded-[var(--radius-md)] bg-[color:var(--surface-base)] p-3">
-                        <p className="truncate text-xs font-semibold text-[color:var(--text-primary)]">
+                        <Ellipsis as="p" className="text-xs font-semibold text-[color:var(--text-primary)]">
                             {admin?.login_code ?? 'admin'}
-                        </p>
+                        </Ellipsis>
                         <p className="text-[11px] text-[color:var(--text-muted)]">Admin · {admin?.role ?? 'admin'}</p>
                         <div className="mt-2 flex items-center gap-1.5">
                             <Button size="xs" variant="ghost" onClick={onToggleTheme} className="flex-1">
@@ -189,7 +190,7 @@ export function AdminShell({ children, title, eyebrow, description, actions, ful
                                 </ul>
                             </nav>
                             <div className="border-t border-[color:var(--border-subtle)] p-3 space-y-2">
-                                <p className="truncate text-xs text-[color:var(--text-muted)]">{admin?.login_code}</p>
+                                <Ellipsis as="p" className="text-xs text-[color:var(--text-muted)]">{admin?.login_code}</Ellipsis>
                                 <div className="flex gap-2">
                                     <Button size="sm" variant="ghost" onClick={onToggleTheme} className="flex-1">
                                         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

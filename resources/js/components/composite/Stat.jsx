@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { Ellipsis } from '@/components/primitives/Ellipsis';
 
 const TONE_ICON = {
     brand: 'text-[color:var(--brand-700)] dark:text-[color:var(--brand-300)]',
@@ -28,7 +29,7 @@ export function Stat({ label, value, hint, delta, icon: Icon, tone = 'brand', cl
                         {value}
                     </p>
                     {hint && (
-                        <p className="mt-1 truncate text-xs text-[color:var(--text-secondary)]">{hint}</p>
+                        <Ellipsis as="p" className="mt-1 text-xs text-[color:var(--text-secondary)]">{hint}</Ellipsis>
                     )}
                 </div>
                 {Icon && (

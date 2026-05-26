@@ -5,6 +5,7 @@ import { Button } from '@/components/primitives/Button';
 import { Select } from '@/components/primitives/Select';
 import { Badge } from '@/components/primitives/Badge';
 import { Input } from '@/components/primitives/Input';
+import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { beepSuccess, beepError } from '@/lib/audio';
@@ -403,9 +404,9 @@ export default function ScannerPage({ activeEvents }) {
                                     <p className="text-[10px] font-semibold uppercase tracking-wider text-white/65">
                                         Event Aktif
                                     </p>
-                                    <p className="truncate text-sm font-medium text-white">
+                                    <Ellipsis as="p" className="text-sm font-medium text-white">
                                         {selectedEvent?.nama_kegiatan ?? 'Pilih event'}
-                                    </p>
+                                    </Ellipsis>
                                 </div>
                                 <Badge
                                     tone={selectedEventState.tone}
@@ -512,9 +513,9 @@ export default function ScannerPage({ activeEvents }) {
                             <div className="min-w-0 flex-1">
                                 {lastResult.ok ? (
                                     <>
-                                        <p className="truncate text-sm font-semibold">
+                                        <Ellipsis as="p" className="text-sm font-semibold">
                                             {lastResult.attendance?.nama}
-                                        </p>
+                                        </Ellipsis>
                                         <p className="text-xs text-white/85">
                                             NIM {lastResult.attendance?.nim} · {lastResult.attendance?.status_label}
                                             {lastResult.attendance?.check_in_time

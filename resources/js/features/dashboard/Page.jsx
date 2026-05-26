@@ -7,6 +7,7 @@ import { Badge } from '@/components/primitives/Badge';
 import { Button } from '@/components/primitives/Button';
 import { Select } from '@/components/primitives/Select';
 import { Sheet } from '@/components/primitives/Sheet';
+import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { EmptyState } from '@/components/composite/EmptyState';
 import { ExportDialog } from '@/components/composite/ExportDialog';
 import { toast } from '@/lib/toast';
@@ -138,7 +139,7 @@ export default function DashboardPage({
                                                             <span className="relative inline-flex h-2 w-2 rounded-full bg-[color:var(--success-fg)]" />
                                                         </span>
                                                     )}
-                                                    <h4 className="truncate text-sm font-semibold tracking-tight">{ev.nama_kegiatan}</h4>
+                                                    <Ellipsis as="h4" className="text-sm font-semibold tracking-tight">{ev.nama_kegiatan}</Ellipsis>
                                                 </div>
                                                 <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
                                                     {ev.waktu_mulai} – {ev.waktu_selesai} · {ev.departemen ?? 'Semua dept.'}
@@ -192,10 +193,10 @@ export default function DashboardPage({
                                         {(a.nama ?? '?').slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium">{a.nama}</p>
-                                        <p className="truncate text-xs text-[color:var(--text-muted)]">
+                                        <Ellipsis as="p" className="text-sm font-medium">{a.nama}</Ellipsis>
+                                        <Ellipsis as="p" className="text-xs text-[color:var(--text-muted)]">
                                             {a.event ?? 'Tanpa event'} · {a.check_in_time}
-                                        </p>
+                                        </Ellipsis>
                                     </div>
                                     <Badge tone={statusTone(a.status)} size="sm">
                                         {a.status_label ?? a.status}

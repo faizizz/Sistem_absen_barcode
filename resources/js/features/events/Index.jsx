@@ -7,6 +7,7 @@ import { Badge } from '@/components/primitives/Badge';
 import { DataTable } from '@/components/composite/DataTable';
 import { EmptyState } from '@/components/composite/EmptyState';
 import { Pagination } from '@/components/composite/Pagination';
+import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { CalendarDays, Plus, Play, Square, Trash2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -50,9 +51,9 @@ export default function EventsIndex({ events, filters, statuses }) {
                             {e.nama_kegiatan}
                         </p>
                         {e.deskripsi && (
-                            <p className="mt-0.5 line-clamp-2 text-xs text-[color:var(--text-muted)]">
+                            <Ellipsis as="p" lines={2} className="mt-0.5 text-xs text-[color:var(--text-muted)]">
                                 {e.deskripsi}
-                            </p>
+                            </Ellipsis>
                         )}
                     </div>
                     <Badge tone={cfg.tone} dot={e.status === 'active'} size="sm">
@@ -88,7 +89,7 @@ export default function EventsIndex({ events, filters, statuses }) {
                 <div className="min-w-0">
                     <p className="font-semibold tracking-tight">{e.nama_kegiatan}</p>
                     {e.deskripsi && (
-                        <p className="mt-0.5 line-clamp-1 text-xs text-[color:var(--text-muted)]">{e.deskripsi}</p>
+                        <Ellipsis as="p" lines={1} className="mt-0.5 text-xs text-[color:var(--text-muted)]">{e.deskripsi}</Ellipsis>
                     )}
                 </div>
             ),
