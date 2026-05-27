@@ -52,21 +52,19 @@ export function Pagination({ links, className }) {
         >
             {/* Mobile compact row */}
             <div className="flex items-center justify-between gap-2 sm:hidden">
-                <PageLink link={prev} ariaLabel="Halaman sebelumnya" className="min-w-[7.5rem]">
-                    <ChevronLeft className="h-4 w-4" />
-                    Sebelumnya
+                <PageLink link={prev} ariaLabel="Halaman sebelumnya" iconOnly>
+                    <ChevronLeft className="h-5 w-5" />
                 </PageLink>
 
-                <p className="px-2 text-center text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--charcoal)]">
+                <p className="flex-1 text-center text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--charcoal)]">
                     Halaman{' '}
                     <span className="text-[color:var(--ink-deep)]">{currentPage}</span>{' '}
                     dari{' '}
                     <span className="text-[color:var(--ink-deep)]">{totalPages || currentPage}</span>
                 </p>
 
-                <PageLink link={next} ariaLabel="Halaman berikutnya" className="min-w-[7.5rem] justify-end">
-                    Berikutnya
-                    <ChevronRight className="h-4 w-4" />
+                <PageLink link={next} ariaLabel="Halaman berikutnya" iconOnly>
+                    <ChevronRight className="h-5 w-5" />
                 </PageLink>
             </div>
 
@@ -132,10 +130,14 @@ export function Pagination({ links, className }) {
     );
 }
 
-/* PageLink — `button-secondary` mobile chrome (transparent + border-2 ink). */
-function PageLink({ link, children, ariaLabel, className }) {
-    const base =
-        'inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border-2 px-7 text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] transition-colors';
+/* PageLink — `button-secondary` mobile chrome (transparent + border-2 ink).
+   When `iconOnly`, renders as a square pill (44×44) sized to fit cramped
+   rows like the mobile pagination band where both prev/next plus the
+   counter must coexist on a 320–375px viewport. */
+function PageLink({ link, children, ariaLabel, className, iconOnly = false }) {
+    const base = iconOnly
+        ? 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2 transition-colors'
+        : 'inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border-2 px-7 text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] transition-colors';
     const enabled =
         'border-[color:var(--ink-deep)] bg-transparent text-[color:var(--ink-deep)] active:bg-[color:var(--ink-deep)] active:text-[color:var(--canvas)]';
     const disabled =
@@ -143,7 +145,7 @@ function PageLink({ link, children, ariaLabel, className }) {
 
     if (!link?.url) {
         return (
-            <span aria-disabled="true" className={cn(base, disabled, className)}>
+            <span aria-disabled="true" aria-label={ariaLabel} className={cn(base, disabled, className)}>
                 {children}
             </span>
         );

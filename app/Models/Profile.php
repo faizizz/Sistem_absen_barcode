@@ -30,6 +30,39 @@ class Profile extends Model
         self::DEPARTEMEN_MPKO,
     ];
 
+    /**
+     * Display-friendly short codes for each department. Used in compact UI
+     * surfaces (badges, mobile cards, narrow table cells) to avoid overflow
+     * from the long canonical names. The full name remains canonical and
+     * stored in the DB; the short code is purely a presentational concern.
+     */
+    public const DEPARTMENT_SHORT_CODES = [
+        self::DEPARTEMEN_BPI  => 'BPI',
+        self::DEPARTEMEN_HRD  => 'HRD',
+        self::DEPARTEMEN_RCS  => 'RELACS',
+        self::DEPARTEMEN_PSD  => 'PSD',
+        self::DEPARTEMEN_ADV  => 'ADWEL',
+        self::DEPARTEMEN_CMI  => 'COMINFO',
+        self::DEPARTEMEN_ENT  => 'EDEN',
+        self::DEPARTEMEN_MPKO => 'MPKO',
+    ];
+
+    /**
+     * Resolve the short display code for a department name.
+     *
+     * Returns null for null/empty input, the registered short code for known
+     * departments, or the original string as a defensive fallback so unknown
+     * (e.g. legacy or future) values still render something readable.
+     */
+    public static function shortCodeFor(?string $department): ?string
+    {
+        if ($department === null || $department === '') {
+            return null;
+        }
+
+        return self::DEPARTMENT_SHORT_CODES[$department] ?? $department;
+    }
+
     protected $fillable = [
         'user_id',
         'nama',

@@ -32,7 +32,8 @@ class AdminScannerController extends Controller
 
         $activeEvents = Event::query()
             ->whereIn('status', [Event::STATUS_DRAFT, Event::STATUS_ACTIVE])
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal_mulai', '<=', $today)
+            ->whereDate('tanggal_selesai', '>=', $today)
             ->orderBy('waktu_mulai')
             ->get()
             ->map(fn (Event $event) => EventResource::brief($event))

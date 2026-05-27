@@ -12,7 +12,8 @@ export default function EventForm({ event, departments }) {
     const { data, setData, post, put, processing, errors } = useForm({
         nama_kegiatan: event?.nama_kegiatan ?? '',
         deskripsi: event?.deskripsi ?? '',
-        tanggal: event?.tanggal ?? '',
+        tanggal_mulai: event?.tanggal_mulai ?? '',
+        tanggal_selesai: event?.tanggal_selesai ?? '',
         waktu_mulai: event?.waktu_mulai ?? '',
         waktu_selesai: event?.waktu_selesai ?? '',
         batas_absensi: event?.batas_absensi ?? '',
@@ -31,7 +32,8 @@ export default function EventForm({ event, departments }) {
 
     const requiredOk =
         data.nama_kegiatan.trim() !== '' &&
-        data.tanggal !== '' &&
+        data.tanggal_mulai !== '' &&
+        data.tanggal_selesai !== '' &&
         data.waktu_mulai !== '' &&
         data.waktu_selesai !== '';
 
@@ -72,16 +74,28 @@ export default function EventForm({ event, departments }) {
                         />
                     </Field>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <Field label="Tanggal" required value={data.tanggal} error={errors.tanggal} htmlFor="tanggal">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Field label="Tanggal Mulai" required value={data.tanggal_mulai} error={errors.tanggal_mulai} htmlFor="tanggal_mulai">
                             <Input
-                                id="tanggal"
+                                id="tanggal_mulai"
                                 type="date"
-                                value={data.tanggal}
-                                onChange={(e) => setData('tanggal', e.target.value)}
+                                value={data.tanggal_mulai}
+                                onChange={(e) => setData('tanggal_mulai', e.target.value)}
                             />
                         </Field>
-                        <Field label="Mulai" required value={data.waktu_mulai} error={errors.waktu_mulai} htmlFor="waktu_mulai">
+                        <Field label="Tanggal Selesai" required value={data.tanggal_selesai} error={errors.tanggal_selesai} htmlFor="tanggal_selesai">
+                            <Input
+                                id="tanggal_selesai"
+                                type="date"
+                                value={data.tanggal_selesai}
+                                min={data.tanggal_mulai || undefined}
+                                onChange={(e) => setData('tanggal_selesai', e.target.value)}
+                            />
+                        </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Field label="Waktu Mulai" required value={data.waktu_mulai} error={errors.waktu_mulai} htmlFor="waktu_mulai">
                             <Input
                                 id="waktu_mulai"
                                 type="time"
@@ -89,7 +103,7 @@ export default function EventForm({ event, departments }) {
                                 onChange={(e) => setData('waktu_mulai', e.target.value)}
                             />
                         </Field>
-                        <Field label="Selesai" required value={data.waktu_selesai} error={errors.waktu_selesai} htmlFor="waktu_selesai">
+                        <Field label="Waktu Selesai" required value={data.waktu_selesai} error={errors.waktu_selesai} htmlFor="waktu_selesai">
                             <Input
                                 id="waktu_selesai"
                                 type="time"

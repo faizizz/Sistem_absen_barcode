@@ -29,7 +29,8 @@ class Event extends Model
     protected $fillable = [
         'nama_kegiatan',
         'deskripsi',
-        'tanggal',
+        'tanggal_mulai',
+        'tanggal_selesai',
         'waktu_mulai',
         'waktu_selesai',
         'batas_absensi',
@@ -41,7 +42,8 @@ class Event extends Model
     protected function casts(): array
     {
         return [
-            'tanggal' => 'date',
+            'tanggal_mulai' => 'date',
+            'tanggal_selesai' => 'date',
             'waktu_mulai' => 'datetime:H:i:s',
             'waktu_selesai' => 'datetime:H:i:s',
             'batas_absensi' => 'datetime:H:i:s',
@@ -59,28 +61,28 @@ class Event extends Model
     }
 
     /**
-     * Combine event date with waktu_mulai into a single moment.
+     * Combine event start date with waktu_mulai into a single moment.
      * Returns null if either value is missing.
      */
     public function startMoment(): ?Carbon
     {
-        if (! $this->tanggal || ! $this->waktu_mulai) {
+        if (! $this->tanggal_mulai || ! $this->waktu_mulai) {
             return null;
         }
 
-        return $this->tanggal->copy()->setTimeFromTimeString($this->waktu_mulai->format('H:i:s'));
+        return $this->tanggal_mulai->copy()->setTimeFromTimeString($this->waktu_mulai->format('H:i:s'));
     }
 
     /**
-     * Combine event date with waktu_selesai into a single moment.
+     * Combine event end date with waktu_selesai into a single moment.
      */
     public function endMoment(): ?Carbon
     {
-        if (! $this->tanggal || ! $this->waktu_selesai) {
+        if (! $this->tanggal_selesai || ! $this->waktu_selesai) {
             return null;
         }
 
-        return $this->tanggal->copy()->setTimeFromTimeString($this->waktu_selesai->format('H:i:s'));
+        return $this->tanggal_selesai->copy()->setTimeFromTimeString($this->waktu_selesai->format('H:i:s'));
     }
 
     /**

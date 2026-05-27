@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+    server: {
+        host: '127.0.0.1',
+        port: 5800,
+    },
     plugins: [
         laravel({
             input: 'resources/js/app.jsx',

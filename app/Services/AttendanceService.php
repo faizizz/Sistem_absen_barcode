@@ -63,7 +63,7 @@ class AttendanceService
         $status = Attendance::STATUS_HADIR;
 
         if ($batas) {
-            $batasMoment = $event->tanggal->copy()->setTimeFromTimeString($batas->format('H:i:s'));
+            $batasMoment = $event->tanggal_mulai->copy()->setTimeFromTimeString($batas->format('H:i:s'));
             if ($now->greaterThan($batasMoment)) {
                 $status = Attendance::STATUS_TERLAMBAT;
             }
@@ -212,7 +212,7 @@ class AttendanceService
             'user_id' => $user->id,
             'event_id' => $event->id,
             'check_in_time' => now(),
-            'attendance_date' => $event->tanggal,
+            'attendance_date' => $event->tanggal_mulai,
             'status' => $data->status,
             'departemen' => $user->profile?->departemen ?? $event->departemen,
             'alasan' => $data->alasan,
@@ -306,10 +306,10 @@ class AttendanceService
                     Attendance::create([
                         'user_id' => $profile->user_id,
                         'event_id' => $event->id,
-                        'check_in_time' => $event->tanggal->copy()->setTimeFromTimeString(
+                        'check_in_time' => $event->tanggal_mulai->copy()->setTimeFromTimeString(
                             ($event->waktu_selesai ?? Carbon::now())->format('H:i:s'),
                         ),
-                        'attendance_date' => $event->tanggal,
+                        'attendance_date' => $event->tanggal_mulai,
                         'status' => Attendance::STATUS_ALPHA,
                         'departemen' => $profile->departemen,
                     ]);

@@ -212,7 +212,11 @@ export default function EventShow({ event, members, summary, filters = {}, depar
         {
             key: 'departemen',
             label: 'Departemen',
-            render: (m) => <Badge tone="brand" size="sm">{m.departemen}</Badge>,
+            render: (m) => (
+                <Badge tone="brand" size="sm" title={m.departemen}>
+                    {m.departemen_kode ?? m.departemen}
+                </Badge>
+            ),
         },
         {
             key: 'status',
@@ -266,7 +270,7 @@ export default function EventShow({ event, members, summary, filters = {}, depar
     return (
         <AdminShell
             title={event.nama_kegiatan}
-            description={`${event.tanggal_label ?? event.tanggal} · ${event.waktu_mulai}–${event.waktu_selesai} · ${event.departemen ?? 'Semua departemen'}`}
+            description={`${event.tanggal_mulai_label}${event.tanggal_selesai !== event.tanggal_mulai ? ` – ${event.tanggal_selesai_label}` : ''} · ${event.waktu_mulai}–${event.waktu_selesai} · ${event.departemen ?? 'Semua departemen'}`}
             stickyCta
         >
             <Head title={event.nama_kegiatan} />

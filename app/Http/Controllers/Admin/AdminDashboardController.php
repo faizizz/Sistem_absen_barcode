@@ -53,13 +53,13 @@ class AdminDashboardController extends Controller
             'exportableEvents' => Cache::remember(
                 'exportable-events',
                 300,
-                fn () => Event::orderByDesc('tanggal')
+                fn () => Event::orderByDesc('tanggal_mulai')
                     ->limit(100)
-                    ->get(['id', 'nama_kegiatan', 'tanggal'])
+                    ->get(['id', 'nama_kegiatan', 'tanggal_mulai'])
                     ->map(fn (Event $event) => [
                         'id' => $event->id,
                         'nama_kegiatan' => $event->nama_kegiatan,
-                        'tanggal' => $event->tanggal?->format('Y-m-d'),
+                        'tanggal' => $event->tanggal_mulai?->format('Y-m-d'),
                     ])
                     ->values(),
             ),

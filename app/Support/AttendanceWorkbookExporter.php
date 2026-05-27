@@ -93,16 +93,16 @@ class AttendanceWorkbookExporter
      */
     private function resolveEvents(): Collection
     {
-        $query = Event::query()->orderBy('tanggal')->orderBy('id');
+        $query = Event::query()->orderBy('tanggal_mulai')->orderBy('id');
 
         if ($this->eventId) {
             $query->where('id', $this->eventId);
         } else {
             if ($this->from) {
-                $query->whereDate('tanggal', '>=', $this->from);
+                $query->whereDate('tanggal_mulai', '>=', $this->from);
             }
             if ($this->to) {
-                $query->whereDate('tanggal', '<=', $this->to);
+                $query->whereDate('tanggal_selesai', '<=', $this->to);
             }
         }
 
@@ -120,7 +120,7 @@ class AttendanceWorkbookExporter
 
             return [
                 $event->nama_kegiatan,
-                optional($event->tanggal)->format('Y-m-d') ?? '-',
+                optional($event->tanggal_mulai)->format('Y-m-d') ?? '-',
                 (string) $stats[Attendance::STATUS_HADIR],
                 (string) $stats[Attendance::STATUS_TERLAMBAT],
                 (string) $stats[Attendance::STATUS_IZIN],
@@ -180,7 +180,7 @@ class AttendanceWorkbookExporter
             ->all();
 
         return [
-            'name' => $event->nama_kegiatan.' ('.optional($event->tanggal)->format('d-m-Y').')',
+            'name' => $event->nama_kegiatan.' ('.optional($event->tanggal_mulai)->format('d-m-Y').')',
             'headers' => ['Nama', 'NIM', 'Departemen', 'Jabatan', 'Status', 'Check-in', 'Alasan'],
             'rows' => $rows,
         ];

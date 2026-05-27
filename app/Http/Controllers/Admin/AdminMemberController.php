@@ -65,13 +65,13 @@ class AdminMemberController extends Controller
             'exportableEvents' => Cache::remember(
                 'exportable-events',
                 300,
-                fn () => Event::orderByDesc('tanggal')
+                fn () => Event::orderByDesc('tanggal_mulai')
                     ->limit(100)
-                    ->get(['id', 'nama_kegiatan', 'tanggal'])
+                    ->get(['id', 'nama_kegiatan', 'tanggal_mulai'])
                     ->map(fn (Event $event) => [
                         'id' => $event->id,
                         'nama_kegiatan' => $event->nama_kegiatan,
-                        'tanggal' => $event->tanggal?->format('Y-m-d'),
+                        'tanggal' => $event->tanggal_mulai?->format('Y-m-d'),
                     ])
                     ->values(),
             ),
@@ -136,7 +136,7 @@ class AdminMemberController extends Controller
             ->through(fn (Attendance $attendance) => [
                 'id' => $attendance->id,
                 'event' => $attendance->event?->nama_kegiatan ?? '—',
-                'tanggal' => optional($attendance->event?->tanggal)->format('d M Y'),
+                'tanggal' => optional($attendance->event?->tanggal_mulai)->format('d M Y'),
                 'status' => $attendance->status,
                 'check_in_time' => optional($attendance->check_in_time)->format('d M Y, H:i'),
                 'alasan' => $attendance->alasan,

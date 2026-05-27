@@ -36,7 +36,8 @@ class DashboardQueryService
     public function todayEvents()
     {
         return Event::query()
-            ->whereDate('tanggal', today())
+            ->whereDate('tanggal_mulai', '<=', today())
+            ->whereDate('tanggal_selesai', '>=', today())
             ->orderBy('waktu_mulai')
             ->get();
     }

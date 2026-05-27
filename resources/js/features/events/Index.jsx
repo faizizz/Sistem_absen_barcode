@@ -62,7 +62,7 @@ export default function EventsIndex({ events, filters, statuses }) {
                 </div>
 
                 <div className="space-y-1 text-xs text-[color:var(--text-secondary)]">
-                    <p>{e.tanggal_label ?? e.tanggal}</p>
+                    <p>{e.tanggal_mulai_label}{e.tanggal_selesai !== e.tanggal_mulai ? ` – ${e.tanggal_selesai_label}` : ''}</p>
                     <p>{e.waktu_mulai}–{e.waktu_selesai} · {e.departemen ?? 'Semua departemen'}</p>
                 </div>
 
@@ -99,7 +99,7 @@ export default function EventsIndex({ events, filters, statuses }) {
             label: 'Tanggal',
             render: (e) => (
                 <div>
-                    <p>{e.tanggal_label ?? e.tanggal}</p>
+                    <p>{e.tanggal_mulai_label}{e.tanggal_selesai !== e.tanggal_mulai ? ` – ${e.tanggal_selesai_label}` : ''}</p>
                     <p className="text-xs text-[color:var(--text-muted)]">
                         {e.waktu_mulai}–{e.waktu_selesai}
                     </p>

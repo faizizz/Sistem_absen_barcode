@@ -95,11 +95,11 @@ export function DataTable({ columns, rows, rowKey = 'id', emptyState, className,
                                     <>
                                         <dl className="space-y-2.5">
                                             {dataCols.map((col) => (
-                                                <div key={col.key} className="flex items-start justify-between gap-3">
-                                                    <dt className="text-xs font-bold uppercase leading-[1.33] tracking-[0.14em] text-[color:var(--steel)]">
+                                                <div key={col.key} className="flex min-w-0 items-start justify-between gap-3">
+                                                    <dt className="shrink-0 text-xs font-bold uppercase leading-[1.33] tracking-[0.14em] text-[color:var(--steel)]">
                                                         {col.label}
                                                     </dt>
-                                                    <dd className="text-right text-sm leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--ink)]">
+                                                    <dd className="min-w-0 flex-1 break-words text-right text-sm leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--ink)]">
                                                         {col.render ? col.render(row, idx) : row[col.key]}
                                                     </dd>
                                                 </div>

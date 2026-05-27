@@ -65,8 +65,8 @@ class EventLifecycleService
             Event::query()
                 ->whereIn('status', [Event::STATUS_DRAFT, Event::STATUS_ACTIVE])
                 ->where(function ($q) use ($today): void {
-                    // Only events on or before today can need transitioning.
-                    $q->whereDate('tanggal', '<=', $today);
+                    // Only events whose start date is on or before today can need transitioning.
+                    $q->whereDate('tanggal_mulai', '<=', $today);
                 })
                 ->lockForUpdate()
                 ->get()

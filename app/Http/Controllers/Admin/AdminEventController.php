@@ -44,7 +44,7 @@ class AdminEventController extends Controller
         }
 
         $events = $query
-            ->orderByDesc('tanggal')
+            ->orderByDesc('tanggal_mulai')
             ->orderByDesc('id')
             ->paginate(12)
             ->withQueryString()
@@ -220,6 +220,7 @@ class AdminEventController extends Controller
                     'nama' => $profile->nama,
                     'nim' => $profile->nim,
                     'departemen' => $profile->departemen,
+                    'departemen_kode' => Profile::shortCodeFor($profile->departemen),
                     'jabatan' => $profile->jabatan,
                     'has_qr' => ! blank($profile->qr_token),
                     'attendance' => $attendance ? [

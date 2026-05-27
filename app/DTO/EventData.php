@@ -7,7 +7,8 @@ final class EventData
     public function __construct(
         public readonly string $namaKegiatan,
         public readonly ?string $deskripsi,
-        public readonly string $tanggal,
+        public readonly string $tanggalMulai,
+        public readonly string $tanggalSelesai,
         public readonly string $waktuMulai,
         public readonly string $waktuSelesai,
         public readonly ?string $batasAbsensi,
@@ -20,7 +21,8 @@ final class EventData
         return new self(
             namaKegiatan: $data['nama_kegiatan'],
             deskripsi: $data['deskripsi'] ?? null,
-            tanggal: $data['tanggal'],
+            tanggalMulai: $data['tanggal_mulai'],
+            tanggalSelesai: $data['tanggal_selesai'],
             waktuMulai: $data['waktu_mulai'],
             waktuSelesai: $data['waktu_selesai'],
             batasAbsensi: $data['batas_absensi'] ?? null,
@@ -33,7 +35,8 @@ final class EventData
         return [
             'nama_kegiatan' => $this->namaKegiatan,
             'deskripsi' => $this->deskripsi,
-            'tanggal' => $this->tanggal,
+            'tanggal_mulai' => $this->tanggalMulai,
+            'tanggal_selesai' => $this->tanggalSelesai,
             'waktu_mulai' => $this->waktuMulai,
             'waktu_selesai' => $this->waktuSelesai,
             'batas_absensi' => $this->batasAbsensi,
