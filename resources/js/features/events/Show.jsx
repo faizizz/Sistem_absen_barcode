@@ -6,6 +6,7 @@ import { Stat } from '@/components/composite/Stat';
 import { Button } from '@/components/primitives/Button';
 import { Badge } from '@/components/primitives/Badge';
 import { Dialog } from '@/components/primitives/Dialog';
+import { Dropdown } from '@/components/primitives/Dropdown';
 import { Field } from '@/components/primitives/Field';
 import { Input, Textarea } from '@/components/primitives/Input';
 import { Select } from '@/components/primitives/Select';
@@ -267,11 +268,65 @@ export default function EventShow({ event, members, summary, filters = {}, depar
         },
     ];
 
+    // Single source of truth for both the desktop Dropdown (in AdminShell
+    // header) and the mobile Sheet. Conditional entries fold in/out based
+    // on event status so the surface stays consistent.
+    const pageActions = [
+        {
+            key: 'ekspor',
+            label: 'Ekspor',
+            icon: Download,
+            onClick: () => setExportOpen(true),
+        },
+        ...(event.status === 'draft' && event.time_state !== 'ended'
+            ? [
+                  {
+                      key: 'aktifkan',
+                      label: 'Aktifkan',
+                      icon: Play,
+                      variant: 'primary',
+                      onClick: handleActivate,
+                  },
+              ]
+            : []),
+        ...(event.status === 'active'
+            ? [
+                  {
+                      key: 'tutup',
+                      label: 'Tutup Event',
+                      icon: Square,
+                      variant: 'danger',
+                      onClick: handleClose,
+                  },
+              ]
+            : []),
+        ...(event.status === 'closed'
+            ? [
+                  {
+                      key: 'alpha',
+                      label: 'Tandai Alpha',
+                      icon: AlertTriangle,
+                      variant: 'danger',
+                      disabled: !canMarkAlpha,
+                      title: canMarkAlpha
+                          ? undefined
+                          : 'Semua anggota sudah punya status',
+                      onClick: handleAlpha,
+                  },
+              ]
+            : []),
+    ];
+
     return (
         <AdminShell
             title={event.nama_kegiatan}
             description={`${event.tanggal_mulai_label}${event.tanggal_selesai !== event.tanggal_mulai ? ` – ${event.tanggal_selesai_label}` : ''} · ${event.waktu_mulai}–${event.waktu_selesai} · ${event.departemen ?? 'Semua departemen'}`}
             stickyCta
+            actions={
+                <div className="hidden md:flex">
+                    <Dropdown label="Aksi Event" items={pageActions} />
+                </div>
+            }
         >
             <Head title={event.nama_kegiatan} />
 
@@ -446,7 +501,7 @@ export default function EventShow({ event, members, summary, filters = {}, depar
             />
 
             <div
-                className="fixed inset-x-0 bottom-[60px] z-20 px-4 pb-2 pt-3 md:bottom-4 md:left-auto md:right-6 md:w-auto md:max-w-xs md:px-0 bg-gradient-to-t from-[color:var(--surface-base)] via-[color:var(--surface-base)] to-transparent pointer-events-none md:bg-none"
+                className="md:hidden fixed inset-x-0 bottom-[60px] z-20 px-4 pb-2 pt-3 bg-gradient-to-t from-[color:var(--surface-base)] via-[color:var(--surface-base)] to-transparent pointer-events-none"
             >
                 <Button
                     onClick={() => setMobileActionsOpen(true)}
@@ -454,7 +509,7 @@ export default function EventShow({ event, members, summary, filters = {}, depar
                     size="lg"
                     fullWidth
                     leftIcon={<MoreHorizontal className="h-5 w-5" />}
-                    className="shadow-[0_8px_24px_rgba(0,0,0,0.18)] pointer-events-auto md:!w-auto md:px-6"
+                    className="shadow-[0_8px_24px_rgba(0,0,0,0.18)] pointer-events-auto"
                 >
                     Aksi Event
                 </Button>

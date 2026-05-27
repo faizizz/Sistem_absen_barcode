@@ -4,6 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { AdminShell } from '@/layouts/AdminShell';
 import { Card } from '@/components/composite/Card';
 import { Button } from '@/components/primitives/Button';
+import { Dropdown } from '@/components/primitives/Dropdown';
 import { Input } from '@/components/primitives/Input';
 import { Select } from '@/components/primitives/Select';
 import { Badge } from '@/components/primitives/Badge';
@@ -317,7 +318,36 @@ export default function MembersIndex({ members, departments, filters, exportable
     ];
 
     return (
-        <AdminShell title="Anggota" stickyCta>
+        <AdminShell
+            title="Anggota"
+            stickyCta
+            actions={
+                <div className="hidden md:flex">
+                    <Dropdown
+                        label="Aksi Anggota"
+                        items={[
+                            {
+                                key: 'tambah',
+                                label: 'Tambah Anggota',
+                                icon: Plus,
+                                href: '/kuasa/members/create',
+                                variant: 'primary',
+                            },
+                            {
+                                key: 'ekspor',
+                                label: 'Ekspor',
+                                icon: Download,
+                                disabled: !hasExportableEvents,
+                                title: hasExportableEvents
+                                    ? undefined
+                                    : 'Belum ada event untuk diekspor',
+                                onClick: () => setExportOpen(true),
+                            },
+                        ]}
+                    />
+                </div>
+            }
+        >
             <Head title="Anggota" />
 
             <Card padding="md" className="mb-5">
@@ -444,9 +474,10 @@ export default function MembersIndex({ members, departments, filters, exportable
             {/* Spacer so the sticky CTA never overlaps the last row */}
             <div className="h-14" aria-hidden="true" />
 
-            {/* Sticky page-action CTA (mirrors event-detail "Aksi Event") */}
+            {/* Sticky page-action CTA — mobile only. Desktop uses the
+                Dropdown injected into AdminShell `actions` slot above. */}
             <div
-                className="fixed inset-x-0 bottom-[60px] z-20 px-4 pb-2 pt-3 md:bottom-4 md:left-auto md:right-6 md:w-auto md:max-w-xs md:px-0 bg-gradient-to-t from-[color:var(--surface-base)] via-[color:var(--surface-base)] to-transparent pointer-events-none md:bg-none"
+                className="md:hidden fixed inset-x-0 bottom-[60px] z-20 px-4 pb-2 pt-3 bg-gradient-to-t from-[color:var(--surface-base)] via-[color:var(--surface-base)] to-transparent pointer-events-none"
             >
                 <Button
                     onClick={() => setPageActionsOpen(true)}
@@ -454,7 +485,7 @@ export default function MembersIndex({ members, departments, filters, exportable
                     size="lg"
                     fullWidth
                     leftIcon={<MoreHorizontal className="h-5 w-5" />}
-                    className="shadow-[0_8px_24px_rgba(0,0,0,0.18)] pointer-events-auto md:!w-auto md:px-6"
+                    className="shadow-[0_8px_24px_rgba(0,0,0,0.18)] pointer-events-auto"
                 >
                     Aksi Anggota
                 </Button>

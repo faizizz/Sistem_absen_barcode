@@ -5,6 +5,7 @@ import { Stat } from '@/components/composite/Stat';
 import { Card, CardHeader } from '@/components/composite/Card';
 import { Badge } from '@/components/primitives/Badge';
 import { Button } from '@/components/primitives/Button';
+import { Dropdown } from '@/components/primitives/Dropdown';
 import { Select } from '@/components/primitives/Select';
 import { Sheet } from '@/components/primitives/Sheet';
 import { Ellipsis } from '@/components/primitives/Ellipsis';
@@ -71,8 +72,39 @@ export default function DashboardPage({
         router.post('/kuasa/attendances/reset');
     }
 
+    // Single source of truth for both the desktop Dropdown (in AdminShell
+    // header) and the mobile Sheet. Keeping it as data lets the two
+    // surfaces stay perfectly in sync without duplicating handlers.
+    const pageActions = [
+        {
+            key: 'ekspor',
+            label: 'Ekspor',
+            icon: Download,
+            disabled: !hasExportableEvents,
+            title: hasExportableEvents ? undefined : 'Belum ada event untuk diekspor',
+            onClick: () => setExportOpen(true),
+        },
+        {
+            key: 'reset',
+            label: 'Reset Hari Ini',
+            icon: RotateCcw,
+            variant: 'danger',
+            title: hasScansToday ? undefined : 'Belum ada absensi hari ini',
+            onClick: handleReset,
+        },
+    ];
+
     return (
-        <AdminShell title="Dashboard" description={subtitle} stickyCta>
+        <AdminShell
+            title="Dashboard"
+            description={subtitle}
+            stickyCta
+            actions={
+                <div className="hidden md:flex">
+                    <Dropdown label="Aksi Dashboard" items={pageActions} />
+                </div>
+            }
+        >
             <Head title="Dashboard Admin" />
 
             {/* Event filter */}
@@ -217,9 +249,10 @@ export default function DashboardPage({
             {/* Spacer so the sticky CTA never overlaps the last row */}
             <div className="h-14" aria-hidden="true" />
 
-            {/* Sticky page-action CTA (mirrors event-detail "Aksi Event") */}
+            {/* Sticky page-action CTA — mobile only. Desktop uses the
+                Dropdown injected into AdminShell `actions` slot above. */}
             <div
-                className="fixed inset-x-0 bottom-[60px] z-20 px-4 pb-2 pt-3 md:bottom-4 md:left-auto md:right-6 md:w-auto md:max-w-xs md:px-0 bg-gradient-to-t from-[color:var(--surface-base)] via-[color:var(--surface-base)] to-transparent pointer-events-none md:bg-none"
+                className="md:hidden fixed inset-x-0 bottom-[60px] z-20 px-4 pb-2 pt-3 bg-gradient-to-t from-[color:var(--surface-base)] via-[color:var(--surface-base)] to-transparent pointer-events-none"
             >
                 <Button
                     onClick={() => setPageActionsOpen(true)}
@@ -227,7 +260,7 @@ export default function DashboardPage({
                     size="lg"
                     fullWidth
                     leftIcon={<MoreHorizontal className="h-5 w-5" />}
-                    className="shadow-[0_8px_24px_rgba(0,0,0,0.18)] pointer-events-auto md:!w-auto md:px-6"
+                    className="shadow-[0_8px_24px_rgba(0,0,0,0.18)] pointer-events-auto"
                 >
                     Aksi Dashboard
                 </Button>
