@@ -9,6 +9,17 @@ function isEmpty(value) {
     return false;
 }
 
+/**
+ * Field — wraps a label + control + hint/error.
+ *
+ * Per DESIGN.md (`text-input` / `text-input-error`):
+ *   - label is `caption-bold` (12px / 700 / 1.33), uppercase, steel
+ *   - error message is `body-sm` (14px / 400 / -0.14px) in critical-strong
+ *   - hint is `body-sm` in steel
+ *
+ * The required-warning that fires onBlur is preserved from the previous
+ * implementation — empty required field shows a warning-fg helper line.
+ */
 export function Field({
     label,
     hint,
@@ -22,7 +33,6 @@ export function Field({
 }) {
     const [touched, setTouched] = useState(false);
 
-    // Mark as touched when focus leaves any descendant of this Field.
     function handleBlur(e) {
         if (!e.currentTarget.contains(e.relatedTarget)) {
             setTouched(true);
@@ -35,16 +45,16 @@ export function Field({
         required && !error && valueProvided && isFieldEmpty && touched;
 
     return (
-        <div className={cn('space-y-1.5', className)} onBlur={handleBlur}>
+        <div className={cn('space-y-2', className)} onBlur={handleBlur}>
             {label && (
                 <label
                     htmlFor={htmlFor}
-                    className="block text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]"
+                    className="block text-xs font-bold uppercase tracking-[0.14em] text-[color:var(--steel)]"
                 >
                     {label}
                     {required && (
                         <span
-                            className="ml-1 text-[color:var(--danger-fg)]"
+                            className="ml-1 text-[color:var(--critical-strong)]"
                             aria-label="Wajib diisi"
                         >
                             *
@@ -54,17 +64,17 @@ export function Field({
             )}
             {children}
             {error ? (
-                <p className="flex items-start gap-1.5 text-xs text-[color:var(--danger-fg)]">
-                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                <p className="flex items-start gap-1.5 text-sm leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--critical-strong)]">
+                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>{error}</span>
                 </p>
             ) : showRequiredWarning ? (
-                <p className="flex items-start gap-1.5 text-xs text-[color:var(--warning-fg)]">
-                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                <p className="flex items-start gap-1.5 text-sm leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--warning-fg)]">
+                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>{requiredMessage}</span>
                 </p>
             ) : hint ? (
-                <p className="text-xs text-[color:var(--text-muted)]">{hint}</p>
+                <p className="text-sm leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--steel)]">{hint}</p>
             ) : null}
         </div>
     );

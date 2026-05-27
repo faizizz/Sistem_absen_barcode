@@ -221,10 +221,10 @@ function FilterChip({ active, onClick, children }) {
         <button
             onClick={onClick}
             className={cn(
-                'inline-flex h-9 items-center rounded-[var(--radius-md)] border px-3.5 text-xs font-medium transition-colors',
+                'inline-flex items-center rounded-[var(--radius-pill)] px-4 py-2 text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] transition-colors',
                 active
-                    ? 'border-[color:var(--brand-600)] bg-[color:var(--brand-600)] text-white'
-                    : 'border-[color:var(--border-default)] bg-[color:var(--surface-raised)] text-[color:var(--text-secondary)] hover:border-[color:var(--brand-400)] hover:bg-[color:var(--surface-base)] hover:text-[color:var(--brand-700)] dark:hover:bg-[rgba(255,255,255,0.06)]',
+                    ? 'bg-[color:var(--ink-deep)] text-[color:var(--canvas)]'
+                    : 'bg-[color:var(--canvas)] text-[color:var(--ink)] border border-[color:var(--hairline)] hover:bg-[color:var(--surface-soft)]',
             )}
         >
             {children}

@@ -216,13 +216,13 @@ describe('ProfileConfirmationView — loading, error, order, and click handlers'
         expect(rejectIndex).toBeGreaterThanOrEqual(0);
         expect(confirmIndex).toBeLessThan(rejectIndex);
 
-        // The Button primitive's primary variant maps to the
-        // `--brand-600` background token. Asserting that fingerprint
-        // confirms variant="primary" without coupling to every utility.
-        expect(confirm).toHaveClass('bg-[color:var(--brand-600)]');
+        // The Button primitive's primary variant maps to the Meta
+        // ink-button token. Asserting that fingerprint confirms
+        // variant="primary" without coupling to every utility.
+        expect(confirm).toHaveClass('bg-[color:var(--ink-button)]');
         // And Reject (variant="ghost") should NOT carry the primary
         // signature, keeping it visually subordinate (Req 3.3).
-        expect(reject).not.toHaveClass('bg-[color:var(--brand-600)]');
+        expect(reject).not.toHaveClass('bg-[color:var(--ink-button)]');
     });
 
     it('invokes onConfirm exactly once when Confirm is clicked (Req 3.1)', () => {

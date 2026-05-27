@@ -16,6 +16,7 @@ use App\Services\QrTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -61,15 +62,19 @@ class AdminMemberController extends Controller
                 'search' => $search,
                 'departemen' => $departmentFilter,
             ],
-            'exportableEvents' => Event::orderByDesc('tanggal')
-                ->limit(100)
-                ->get(['id', 'nama_kegiatan', 'tanggal'])
-                ->map(fn (Event $event) => [
-                    'id' => $event->id,
-                    'nama_kegiatan' => $event->nama_kegiatan,
-                    'tanggal' => $event->tanggal?->format('Y-m-d'),
-                ])
-                ->values(),
+            'exportableEvents' => Cache::remember(
+                'exportable-events',
+                300,
+                fn () => Event::orderByDesc('tanggal')
+                    ->limit(100)
+                    ->get(['id', 'nama_kegiatan', 'tanggal'])
+                    ->map(fn (Event $event) => [
+                        'id' => $event->id,
+                        'nama_kegiatan' => $event->nama_kegiatan,
+                        'tanggal' => $event->tanggal?->format('Y-m-d'),
+                    ])
+                    ->values(),
+            ),
         ]);
     }
 

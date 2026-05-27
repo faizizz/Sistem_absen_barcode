@@ -3,27 +3,18 @@ import { ChevronsDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 /**
- * Floating "scroll to bottom" action button.
+ * ScrollToBottomButton — DESIGN.md `button-icon-circular` chrome.
  *
- * Appears only when:
- *   1. The page actually has more content than the viewport,
- *   2. The user has scrolled at least `threshold` px from the top, AND
- *   3. The user is not already near the bottom (≥ `threshold` px away).
+ * Spec mapping:
+ *   - background `{colors.canvas}`, icon `{colors.ink}`, rounded `{rounded.circle}`
+ *   - 40×40px on desktop; bumps to 44×44 on mobile per DESIGN.md
+ *     "Touch Targets" (icon buttons hit AAA on touch surfaces).
+ *   - level-2 sticky-panel shadow lifts the FAB off the canvas because it
+ *     IS a sticky-bar utility (per the elevation rules).
  *
- * Layout:
- *   - On mobile we sit above the BottomNav and the iOS safe-area inset.
- *   - On md and up the BottomNav is hidden so we just clear the viewport edge.
- *   - When `stickyCta` is true, additional vertical clearance is added so
- *     the FAB never overlaps a page-level sticky action button. Pages that
- *     mount a sticky CTA (Dashboard, Events list, Members list, Event Show)
- *     pass this flag through AdminShell.
- *
- * Props:
- *   threshold (number): how close to the top/bottom (in px) we still
- *                        consider a no-op. Default 120.
- *   stickyCta (bool):   true when the host page already has a sticky
- *                        bottom action button so we need to bump up.
- *   className (string): extra classes for positioning overrides.
+ * It appears only when the host page is longer than the viewport and the
+ * user has scrolled past `threshold`; bumps higher when stickyCta is true
+ * so it never overlaps the page-action CTA.
  */
 export function ScrollToBottomButton({
     threshold = 120,
@@ -37,22 +28,17 @@ export function ScrollToBottomButton({
             if (typeof window === 'undefined') return;
 
             const viewportH = window.innerHeight;
-            // Use the larger of body/document scrollHeight to handle browsers
-            // that sometimes report only one or the other reliably.
             const docH = Math.max(
                 document.documentElement.scrollHeight,
                 document.body?.scrollHeight ?? 0,
             );
 
-            // Page must be longer than viewport before the button is useful.
             const scrollable = docH - viewportH > threshold;
             if (!scrollable) {
                 setShow(false);
                 return;
             }
 
-            // Hide while the user is still at (or very near) the top — the
-            // button is only useful once they've started scrolling down.
             if (window.scrollY < threshold) {
                 setShow(false);
                 return;
@@ -65,8 +51,6 @@ export function ScrollToBottomButton({
         evaluate();
         window.addEventListener('scroll', evaluate, { passive: true });
         window.addEventListener('resize', evaluate);
-        // Watch for content changes (Inertia partial reloads, dynamic data,
-        // collapsing/expanding cards) that change scrollHeight.
         const obs = new MutationObserver(evaluate);
         obs.observe(document.body, {
             childList: true,
@@ -97,13 +81,10 @@ export function ScrollToBottomButton({
             onClick={scrollToBottom}
             aria-label="Gulir ke bawah"
             className={cn(
-                // Mobile: sit above the bottom nav (h-14 ≈ 60px) plus safe-area.
-                // When the page also has a sticky CTA we add ~64px more so the
-                // FAB clears it. md+ has no bottom nav so we just bump for the
-                // floating CTA at bottom-4 right-6 (h-12 ≈ 48px) when present.
-                'fixed right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full',
-                'bg-[color:var(--brand-600)] text-white shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md',
-                'transition-all duration-200 ease-out hover:bg-[color:var(--brand-700)] active:scale-95',
+                /* Canvas + ink icon, perfect circle, AA-on-desktop / AAA-on-mobile size. */
+                'fixed right-4 z-40 flex h-11 w-11 md:h-10 md:w-10 items-center justify-center rounded-full',
+                'bg-[color:var(--canvas)] text-[color:var(--ink)] border border-[color:var(--hairline-soft)] shadow-[var(--shadow-md)]',
+                'transition-all duration-200 ease-out hover:bg-[color:var(--surface-soft)] active:scale-95',
                 stickyCta
                     ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+136px)] md:bottom-24 md:right-6'
                     : 'bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] md:bottom-6 md:right-6',

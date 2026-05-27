@@ -141,38 +141,78 @@ class AdminEventController extends Controller
 
         $event->load('creator');
 
-        // Pull every attendance row (including revoked ones) so we can
-        // both (a) pick the most recent ACTIVE record per user for the
-        // roster and (b) surface revoked rows as standalone entries that
-        // admins can audit. We do NOT key by user_id on the full set
-        // because a single user may legitimately have one revoked plus
-        // one fresh active record after a re-record.
-        $allAttendances = Attendance::query()
-            ->with('user.profile')
-            ->where('event_id', $event->id)
-            ->orderByDesc('check_in_time')
-            ->get();
+        $search = $request->string('search')->trim()->toString();
+        $statusFilter = $request->string('status')->lower()->toString();
+        $departmentFilter = $request->string('departemen')->toString();
 
-        // Active record per user (status != revoked). Revoked rows are
-        // tracked separately so the roster row reflects the latest
-        // valid attendance, not a historical revoked entry.
-        $activeByUser = $allAttendances
+        $allowedStatuses = array_merge(['all', 'belum'], Attendance::ACTIVE_STATUSES);
+        if (! in_array($statusFilter, $allowedStatuses, true)) {
+            $statusFilter = 'all';
+        }
+
+        if ($event->departemen || ! in_array($departmentFilter, Profile::DEPARTMENTS, true)) {
+            $departmentFilter = '';
+        }
+
+        // Keep one current active attendance per user for the roster and
+        // summary, while counting revoked rows separately for audit context.
+        $activeByUser = Attendance::query()
+            ->where('event_id', $event->id)
             ->whereIn('status', Attendance::ACTIVE_STATUSES)
+            ->orderByDesc('check_in_time')
+            ->get()
+            ->unique('user_id')
             ->keyBy('user_id');
 
-        $revokedRows = $allAttendances
+        $revokedCount = Attendance::query()
+            ->where('event_id', $event->id)
             ->where('status', Attendance::STATUS_REVOKED)
+            ->count();
+
+        $baseMemberQuery = Profile::query()->with('user');
+        if ($event->departemen) {
+            $baseMemberQuery->where('departemen', $event->departemen);
+        }
+
+        $totalMembers = (clone $baseMemberQuery)->count();
+        $departments = (clone $baseMemberQuery)
+            ->whereNotNull('departemen')
+            ->distinct()
+            ->orderBy('departemen')
+            ->pluck('departemen')
             ->values();
 
-        $memberQuery = Profile::query()->with('user');
-        if ($event->departemen) {
-            $memberQuery->where('departemen', $event->departemen);
+        $memberQuery = clone $baseMemberQuery;
+
+        if ($search !== '') {
+            $needle = '%'.strtolower($search).'%';
+            $memberQuery->where(function ($q) use ($needle): void {
+                $q->whereRaw('LOWER(nama) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(nim) LIKE ?', [$needle]);
+            });
+        }
+
+        if ($departmentFilter !== '') {
+            $memberQuery->where('departemen', $departmentFilter);
+        }
+
+        if ($statusFilter === 'belum') {
+            $memberQuery->whereNotIn('user_id', $activeByUser->keys()->all());
+        } elseif ($statusFilter !== 'all') {
+            $memberQuery->whereIn(
+                'user_id',
+                $activeByUser
+                    ->filter(fn (Attendance $attendance) => $attendance->status === $statusFilter)
+                    ->keys()
+                    ->all(),
+            );
         }
 
         $members = $memberQuery
             ->orderBy('nama')
-            ->get()
-            ->map(function (Profile $profile) use ($activeByUser) {
+            ->paginate(50)
+            ->withQueryString()
+            ->through(function (Profile $profile) use ($activeByUser) {
                 $attendance = $activeByUser->get($profile->user_id);
 
                 return [
@@ -189,8 +229,7 @@ class AdminEventController extends Controller
                         'check_in_time' => optional($attendance->check_in_time)->format('d M Y, H:i'),
                     ] : null,
                 ];
-            })
-            ->values();
+            });
 
         $summary = [
             'hadir' => $activeByUser->where('status', Attendance::STATUS_HADIR)->count(),
@@ -198,14 +237,21 @@ class AdminEventController extends Controller
             'izin' => $activeByUser->where('status', Attendance::STATUS_IZIN)->count(),
             'sakit' => $activeByUser->where('status', Attendance::STATUS_SAKIT)->count(),
             'alpha' => $activeByUser->where('status', Attendance::STATUS_ALPHA)->count(),
-            'revoked' => $revokedRows->count(),
-            'total_members' => $members->count(),
+            'belum' => max($totalMembers - $activeByUser->count(), 0),
+            'revoked' => $revokedCount,
+            'total_members' => $totalMembers,
         ];
 
         return Inertia::render('Admin/Events/Show', [
             'admin' => ['login_code' => $request->user()?->login_code],
             'event' => (new EventResource($event))->toArray($request),
             'members' => $members,
+            'filters' => [
+                'search' => $search,
+                'status' => $statusFilter,
+                'departemen' => $departmentFilter,
+            ],
+            'departments' => $departments,
             'summary' => $summary,
         ]);
     }

@@ -72,7 +72,7 @@ export function QrDisplayView({ qrToken, profile, onReset }) {
             <button
                 type="button"
                 onClick={onReset}
-                className="inline-flex items-center gap-1.5 py-2 text-xs font-medium text-[color:var(--text-muted)] hover:text-[color:var(--brand-700)] dark:hover:text-[color:var(--brand-300)]"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] px-[22px] py-[10px] text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--ink-deep)] hover:bg-[color:var(--surface-soft)]"
             >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Ganti NIM

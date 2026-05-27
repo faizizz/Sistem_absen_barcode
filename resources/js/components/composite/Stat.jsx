@@ -2,40 +2,56 @@ import { cn } from '@/lib/cn';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { Ellipsis } from '@/components/primitives/Ellipsis';
 
+/* Tone -> icon-frame foreground. The frame itself is always a soft
+   surface-soft circle to keep the "flat by default" Meta posture. */
 const TONE_ICON = {
-    brand: 'text-[color:var(--brand-700)] dark:text-[color:var(--brand-300)]',
-    accent: 'text-[color:var(--accent-700)] dark:text-[color:var(--accent-300)]',
-    success: 'text-[color:var(--success-fg)]',
-    warning: 'text-[color:var(--warning-fg)]',
-    danger: 'text-[color:var(--danger-fg)]',
-    info: 'text-[color:var(--info-fg,var(--brand-600))]',
+    brand:   'text-[color:var(--primary-deep)]',
+    accent:  'text-[color:var(--ink-deep)]',
+    success: 'text-[color:var(--success)]',
+    warning: 'text-[color:var(--attention)]',
+    danger:  'text-[color:var(--critical)]',
+    info:    'text-[color:var(--primary)]',
 };
 
+/**
+ * Stat — large-number tile.
+ *
+ * Layout mirrors `why-buy-tile` chrome (canvas, 16px radius, hairline
+ * border, 32px / 24px padding). Hierarchy inside:
+ *   - eyebrow label  : `caption-bold` 12px uppercase steel
+ *   - value          : `heading-lg`   36px display
+ *   - hint           : `body-sm`      14px charcoal
+ *   - icon frame     : 40px circle, `button-icon-circular` chrome
+ *   - delta          : `body-sm-bold` colored success/critical
+ */
 export function Stat({ label, value, hint, delta, icon: Icon, tone = 'brand', className }) {
     const positive = typeof delta === 'number' && delta >= 0;
     return (
         <div
             className={cn(
-                'relative rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-raised)] p-4 sm:p-5',
+                'relative rounded-[var(--radius-xl)] border border-[color:var(--hairline-soft)] bg-[color:var(--canvas)] p-6 sm:py-8 sm:px-6',
                 className,
             )}
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-[color:var(--text-muted)]">
+                    <p className="meta-eyebrow">
                         {label}
                     </p>
-                    <p className="mt-1.5 text-2xl font-semibold leading-tight tracking-tight text-[color:var(--text-primary)] sm:text-[28px]">
+                    <p className="mt-3 meta-heading-lg leading-none text-[color:var(--ink-deep)]">
                         {value}
                     </p>
                     {hint && (
-                        <Ellipsis as="p" className="mt-1 text-xs text-[color:var(--text-secondary)]">{hint}</Ellipsis>
+                        <Ellipsis as="p" className="mt-2 text-sm leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--charcoal)]">
+                            {hint}
+                        </Ellipsis>
                     )}
                 </div>
                 {Icon && (
                     <div
                         className={cn(
-                            'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-base)]',
+                            /* `button-icon-circular` — 40×40, canvas, ink icon. */
+                            'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--hairline-soft)] bg-[color:var(--surface-soft)]',
                             TONE_ICON[tone] ?? TONE_ICON.brand,
                         )}
                     >
@@ -44,13 +60,13 @@ export function Stat({ label, value, hint, delta, icon: Icon, tone = 'brand', cl
                 )}
             </div>
             {typeof delta === 'number' && (
-                <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium">
+                <div className="mt-4 inline-flex items-center gap-1 text-sm font-bold leading-[1.43] [letter-spacing:-0.14px]">
                     {positive ? (
-                        <ArrowUpRight className="h-3.5 w-3.5 text-[color:var(--success-fg)]" />
+                        <ArrowUpRight className="h-4 w-4 text-[color:var(--success)]" />
                     ) : (
-                        <ArrowDownRight className="h-3.5 w-3.5 text-[color:var(--danger-fg)]" />
+                        <ArrowDownRight className="h-4 w-4 text-[color:var(--critical)]" />
                     )}
-                    <span className={positive ? 'text-[color:var(--success-fg)]' : 'text-[color:var(--danger-fg)]'}>
+                    <span className={positive ? 'text-[color:var(--success)]' : 'text-[color:var(--critical)]'}>
                         {positive ? '+' : ''}
                         {delta}%
                     </span>

@@ -3,6 +3,12 @@ import { Fragment } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
+/**
+ * Dialog — Meta-style modal.
+ * Rounds to 24px (`--radius-2xl`) on desktop and 24px top-only on the
+ * mobile bottom sheet variant. Surface is canvas; backdrop is the
+ * `rgba(10,19,23,0.55)` ink translucent overlay called out in DESIGN.md.
+ */
 export function Dialog({ open, onClose, title, description, children, footer, size = 'md' }) {
     const sizeMap = {
         sm: 'max-w-md',
@@ -23,7 +29,11 @@ export function Dialog({ open, onClose, title, description, children, footer, si
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 bg-black/55 backdrop-blur-sm" aria-hidden="true" />
+                    <div
+                        className="fixed inset-0 backdrop-blur-sm"
+                        style={{ background: 'rgba(10, 19, 23, 0.55)' }}
+                        aria-hidden="true"
+                    />
                 </TransitionChild>
 
                 <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
@@ -38,32 +48,33 @@ export function Dialog({ open, onClose, title, description, children, footer, si
                     >
                         <DialogPanel
                             className={cn(
-                                'relative w-full overflow-hidden bg-[color:var(--surface-raised)] shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-xl)] rounded-t-[var(--radius-xl)]',
+                                'relative w-full overflow-hidden bg-[color:var(--canvas)] shadow-[var(--shadow-md)] sm:rounded-[var(--radius-2xl)] rounded-t-[var(--radius-2xl)]',
                                 sizeMap[size] ?? sizeMap.md,
                             )}
                         >
-                            <header className="flex items-start justify-between gap-4 border-b border-[color:var(--border-subtle)] px-6 py-4">
-                                <div>
+                            <header className="flex items-start justify-between gap-4 border-b border-[color:var(--hairline-soft)] px-6 py-5">
+                                <div className="min-w-0">
                                     {title && (
-                                        <DialogTitle className="text-base font-semibold tracking-tight text-[color:var(--text-primary)]">
+                                        <DialogTitle className="meta-heading-sm text-[color:var(--ink-deep)]">
                                             {title}
                                         </DialogTitle>
                                     )}
                                     {description && (
-                                        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{description}</p>
+                                        <p className="mt-1.5 text-base [letter-spacing:-0.16px] leading-[1.5] text-[color:var(--charcoal)]">{description}</p>
                                     )}
                                 </div>
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="rounded-[var(--radius-sm)] p-1.5 text-[color:var(--text-muted)] hover:bg-[color:var(--surface-glass)] hover:text-[color:var(--text-primary)]"
+                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--canvas)] text-[color:var(--ink)] hover:bg-[color:var(--surface-soft)]"
+                                    aria-label="Tutup"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
                             </header>
                             <div className="px-6 py-5 max-h-[70vh] overflow-y-auto app-scrollbar">{children}</div>
                             {footer && (
-                                <footer className="flex justify-end gap-2 border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-base)] px-6 py-3">
+                                <footer className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--hairline-soft)] bg-[color:var(--surface-soft)] px-6 py-4">
                                     {footer}
                                 </footer>
                             )}

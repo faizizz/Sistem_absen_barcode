@@ -109,7 +109,7 @@ export default function AuditIndex({ logs, actions, filters }) {
                     <button
                         type="button"
                         onClick={() => toggleExpand(l.id)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--brand-700)] hover:text-[color:var(--brand-600)] dark:text-[color:var(--brand-300)]"
+                        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-[22px] py-[10px] text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] text-[color:var(--ink-deep)] hover:bg-[color:var(--surface-soft)]"
                     >
                         {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         {isOpen ? 'Sembunyikan detail' : 'Lihat detail'}

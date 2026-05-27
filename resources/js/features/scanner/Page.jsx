@@ -21,17 +21,13 @@ import {
     ScanLine,
     SwitchCamera,
     Keyboard,
+    Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const SCANNER_DOM_ID = 'qr-scanner-region';
-// Top inset clears notch + status bar plus a small breathing buffer.
-const TOP_SAFE_OFFSET = 'calc(env(safe-area-inset-top, 0px) + 10px)';
-// Bottom inset clears the BottomNav and iOS home-indicator strip.
-const BOTTOM_SAFE_OFFSET =
-    'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 10px)';
 
-export default function ScannerPage({ activeEvents }) {
+export default function ScannerPage({ activeEvents, recentAttendances }) {
     const firstOpen = (activeEvents ?? []).find((e) => e.is_open_for_scan);
     const [eventId, setEventId] = useState(firstOpen?.id ?? null);
     const [manualOpen, setManualOpen] = useState(false);
@@ -45,6 +41,18 @@ export default function ScannerPage({ activeEvents }) {
     const [activeCameraId, setActiveCameraId] = useState(null);
     const [switching, setSwitching] = useState(false);
     const [eventPanelOpen, setEventPanelOpen] = useState(false);
+
+    // Recent scans feed: hydrate from props, then optimistically prepend on
+    // each successful scan so the operator sees the row instantly without
+    // waiting for the next 30s Inertia reload.
+    const propsRecent = useMemo(
+        () => (Array.isArray(recentAttendances) ? recentAttendances : recentAttendances?.data ?? []),
+        [recentAttendances],
+    );
+    const [recent, setRecent] = useState(propsRecent);
+    useEffect(() => {
+        setRecent(propsRecent);
+    }, [propsRecent]);
 
     const html5Ref = useRef(null);
     const submittingRef = useRef(false);
@@ -281,6 +289,12 @@ export default function ScannerPage({ activeEvents }) {
             setFlashType('success');
             beepSuccess();
             setLastResult({ ok: true, ...data });
+            if (data?.attendance) {
+                setRecent((prev) => {
+                    const next = [data.attendance, ...prev.filter((r) => r.id !== data.attendance.id)];
+                    return next.slice(0, 12);
+                });
+            }
         } catch (err) {
             // The session-expired interceptor already showed a toast and is
             // redirecting; don't double-flash the user with a second message.
@@ -317,232 +331,219 @@ export default function ScannerPage({ activeEvents }) {
     const noActiveEvents = (activeEvents ?? []).length === 0;
 
     return (
-        <div className="absolute inset-0 bg-black text-white overflow-hidden">
+        <>
             <Head title="Scanner" />
 
-            {/* Camera viewport — fullscreen */}
-            <div id={SCANNER_DOM_ID} className="absolute inset-0 [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover" />
+            {/* Page column: dark scanner block on top, light recent-scans
+                panel filling the gap below. */}
+            <div className="flex h-full flex-col">
+                <div className="relative flex flex-1 min-h-0 flex-col bg-black text-white">
 
-            {/* Loading state */}
-            {!cameraReady && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80">
-                    <Camera className="h-10 w-10 animate-pulse" />
-                    <p className="text-sm">Mengaktifkan kamera…</p>
-                </div>
-            )}
+                {/* ── Header ─────────────────────────────────────── */}
+                <header className="relative z-30 shrink-0 space-y-2 px-4 pb-2 pt-[env(safe-area-inset-top,8px)] sm:px-6">
+                    <div className="flex items-center justify-end gap-2">
+                        <Badge tone={cameraReady ? 'success' : 'neutral'} dot={cameraReady} size="sm" className="bg-black/55 backdrop-blur-md">
+                            {cameraReady ? 'Kamera Aktif' : 'Menunggu kamera'}
+                        </Badge>
+                        <button
+                            onClick={flipCamera}
+                            disabled={cameras.length < 2 || switching}
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md hover:bg-black/70 disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Balik kamera"
+                            title={cameras.length < 2 ? 'Hanya satu kamera tersedia' : 'Balik kamera'}
+                        >
+                            {switching ? <CameraOff className="h-5 w-5 animate-pulse" /> : <SwitchCamera className="h-5 w-5" />}
+                        </button>
+                    </div>
 
-            {/* Dim vignette so overlay UI reads */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/65" />
+                    <div ref={eventPanelRef}>
+                        {noActiveEvents ? (
+                            <div className="rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 backdrop-blur-md">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs text-white/80">Tidak ada event aktif.</p>
+                                    <Button as={Link} href="/kuasa/events" size="xs" variant="primary">
+                                        Kelola Event
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => setEventPanelOpen((v) => !v)}
+                                    aria-expanded={eventPanelOpen}
+                                    aria-label="Buka panel event aktif"
+                                    className="flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 text-left backdrop-blur-md"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/65">
+                                            Event Aktif
+                                        </p>
+                                        <Ellipsis as="p" className="text-sm font-medium text-white">
+                                            {selectedEvent?.nama_kegiatan ?? 'Pilih event'}
+                                        </Ellipsis>
+                                    </div>
+                                    <Badge
+                                        tone={selectedEventState.tone}
+                                        size="sm"
+                                        className="bg-black/35 text-white border-white/20"
+                                    >
+                                        {selectedEventState.label}
+                                    </Badge>
+                                    {eventPanelOpen ? (
+                                        <ChevronUp className="h-4 w-4 text-white/70" />
+                                    ) : (
+                                        <ChevronDown className="h-4 w-4 text-white/70" />
+                                    )}
+                                </button>
 
-            {/* Flash overlay */}
-            <AnimatePresence>
-                {flashType && (
-                    <motion.div
-                        key={flashType}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: [0, 0.55, 0] }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.35, times: [0, 0.4, 1] }}
-                        className={cn(
-                            'pointer-events-none absolute inset-0 z-20',
-                            flashType === 'success' ? 'bg-emerald-400' : 'bg-red-500',
+                                <AnimatePresence>
+                                    {eventPanelOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -8 }}
+                                            className="mt-2 rounded-[var(--radius-lg)] bg-black/65 p-3 backdrop-blur-md"
+                                        >
+                                            <p className="mb-2 text-[11px] text-white/75">Pilih event yang ingin discan</p>
+                                            <Select
+                                                value={eventId}
+                                                onChange={handleEventChange}
+                                                options={eventOptions}
+                                                className="[&_button]:!bg-white/10 [&_button]:!text-white [&_button]:!border-white/20 [&_svg]:!text-white/70"
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </>
                         )}
-                    />
-                )}
-            </AnimatePresence>
+                    </div>
+                </header>
 
-            {/*
-              Reticle — sits inside a safe-zone band between the top header
-              and the bottom toolbar so it never overlaps either. The size
-              is clamp(180px, 60vmin, 300px), guaranteeing it fits even on
-              short phones (≤640px tall) while still feeling generous on
-              tablets and landscape.
-            */}
-            <div
-                className="pointer-events-none absolute inset-x-0 z-10 flex items-center justify-center px-4"
-                style={{
-                    top: 'calc(env(safe-area-inset-top, 0px) + 168px)',
-                    bottom: 'calc(var(--shell-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 120px)',
-                }}
-            >
-                <div
-                    className="relative aspect-square"
-                    style={{ width: 'clamp(180px, 60vmin, 300px)' }}
-                >
-                    <Corner className="-left-1 -top-1 border-l-2 border-t-2" />
-                    <Corner className="-right-1 -top-1 border-r-2 border-t-2" />
-                    <Corner className="-bottom-1 -left-1 border-b-2 border-l-2" />
-                    <Corner className="-bottom-1 -right-1 border-b-2 border-r-2" />
-                    <motion.div
-                        className="absolute inset-x-3 h-0.5 bg-[color:var(--brand-300)] shadow-[0_0_12px_rgba(103,232,249,0.8)]"
-                        animate={{ top: ['8%', '92%', '8%'] }}
-                        transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                {/* ── Camera viewport ────────────────────────────── */}
+                <div className="relative flex-1 min-h-0 overflow-hidden">
+                    {/* html5-qrcode mounts <video> here */}
+                    <div
+                        id={SCANNER_DOM_ID}
+                        className="absolute inset-0 [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover"
                     />
+
+                    {/* Loading overlay */}
+                    {!cameraReady && (
+                        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/80">
+                            <Camera className="h-10 w-10 animate-pulse" />
+                            <p className="text-sm">Mengaktifkan kamera…</p>
+                        </div>
+                    )}
+
+                    {/* Vignette */}
+                    <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/50 via-transparent to-black/50" />
+
+                    {/* Flash */}
+                    <AnimatePresence>
+                        {flashType && (
+                            <motion.div
+                                key={flashType}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: [0, 0.55, 0] }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.35, times: [0, 0.4, 1] }}
+                                className={cn(
+                                    'pointer-events-none absolute inset-0 z-20',
+                                    flashType === 'success' ? 'bg-emerald-400' : 'bg-red-500',
+                                )}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    {/* Reticle */}
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                        <div className="relative aspect-square" style={{ width: 'clamp(160px, 50%, 280px)' }}>
+                            <Corner className="-left-1 -top-1 border-l-2 border-t-2" />
+                            <Corner className="-right-1 -top-1 border-r-2 border-t-2" />
+                            <Corner className="-bottom-1 -left-1 border-b-2 border-l-2" />
+                            <Corner className="-bottom-1 -right-1 border-b-2 border-r-2" />
+                            <motion.div
+                                className="absolute inset-x-3 h-0.5 bg-[color:var(--brand-300)] shadow-[0_0_12px_rgba(103,232,249,0.8)]"
+                                animate={{ top: ['8%', '92%', '8%'] }}
+                                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Scan result toast */}
+                    <AnimatePresence>
+                        {lastResult && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -16, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -16, scale: 0.95 }}
+                                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                className={cn(
+                                    'pointer-events-none absolute top-3 left-1/2 z-30 w-[min(88%,360px)] -translate-x-1/2 rounded-[var(--radius-lg)] border p-3 backdrop-blur-md',
+                                    lastResult.ok
+                                        ? 'border-emerald-400/40 bg-emerald-500/30'
+                                        : 'border-red-400/40 bg-red-500/30',
+                                )}
+                            >
+                                <div className="flex items-start gap-2.5">
+                                    {lastResult.ok ? (
+                                        <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-200" />
+                                    ) : (
+                                        <XCircle className="h-5 w-5 flex-shrink-0 text-red-200" />
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        {lastResult.ok ? (
+                                            <>
+                                                <Ellipsis as="p" className="text-sm font-semibold">
+                                                    {lastResult.attendance?.nama}
+                                                </Ellipsis>
+                                                <p className="text-xs text-white/85">
+                                                    NIM {lastResult.attendance?.nim} · {lastResult.attendance?.status_label}
+                                                    {lastResult.attendance?.check_in_time
+                                                        ? ` · ${lastResult.attendance.check_in_time}`
+                                                        : ''}
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="text-sm font-medium">{lastResult.message}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
+
+                {/* ── Footer ─────────────────────────────────────── */}
+                <footer className="relative z-30 shrink-0 flex flex-col items-center gap-2 px-4 pb-2 pt-2 sm:px-6">
+                    <p className="inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white/85 backdrop-blur-md">
+                        <ScanLine className="h-3.5 w-3.5" />
+                        Arahkan QR ke tengah bingkai
+                    </p>
+                    <button
+                        onClick={() => setManualOpen(true)}
+                        className="flex h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[color:var(--ink-button)] px-[30px] text-sm font-bold text-[color:var(--canvas)] shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--charcoal)] active:scale-[0.98]"
+                    >
+                        <Keyboard className="h-4 w-4" />
+                        Input Manual
+                    </button>
+                </footer>
+                </div>
+
+                {/* ── Recent scans ──────────────────────────────────
+                    Lives in the light gap between the dark scanner block
+                    and the BottomNav. Uses surface-soft / canvas tokens so
+                    it visually belongs to the admin shell, not the camera
+                    tool. Capped height with internal scroll so a long list
+                    never pushes the camera viewport. */}
+                <RecentScansPanel
+                    items={recent}
+                    selectedEventId={eventId}
+                />
             </div>
 
-            {/* Top bar */}
-            <header className="absolute inset-x-0 z-30 px-4 sm:px-6" style={{ top: TOP_SAFE_OFFSET }}>
-                <div className="flex items-center justify-end gap-2">
-                    <Badge tone={cameraReady ? 'success' : 'neutral'} dot={cameraReady} size="sm" className="bg-black/55 backdrop-blur-md">
-                        {cameraReady ? 'Kamera Aktif' : 'Menunggu kamera'}
-                    </Badge>
-
-                    <button
-                        onClick={flipCamera}
-                        disabled={cameras.length < 2 || switching}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md hover:bg-black/70 disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Balik kamera"
-                        title={cameras.length < 2 ? 'Hanya satu kamera tersedia' : 'Balik kamera'}
-                    >
-                        {switching ? <CameraOff className="h-5 w-5 animate-pulse" /> : <SwitchCamera className="h-5 w-5" />}
-                    </button>
-                </div>
-
-                <div className="mt-2" ref={eventPanelRef}>
-                    {noActiveEvents ? (
-                        <div className="rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 backdrop-blur-md">
-                            <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs text-white/80">Tidak ada event aktif.</p>
-                                <Button as={Link} href="/kuasa/events" size="xs" variant="primary">
-                                    Kelola Event
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <button
-                                type="button"
-                                onClick={() => setEventPanelOpen((v) => !v)}
-                                aria-expanded={eventPanelOpen}
-                                aria-label="Buka panel event aktif"
-                                className="flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 text-left backdrop-blur-md"
-                            >
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/65">
-                                        Event Aktif
-                                    </p>
-                                    <Ellipsis as="p" className="text-sm font-medium text-white">
-                                        {selectedEvent?.nama_kegiatan ?? 'Pilih event'}
-                                    </Ellipsis>
-                                </div>
-                                <Badge
-                                    tone={selectedEventState.tone}
-                                    size="sm"
-                                    className="bg-black/35 text-white border-white/20"
-                                >
-                                    {selectedEventState.label}
-                                </Badge>
-                                {eventPanelOpen ? (
-                                    <ChevronUp className="h-4 w-4 text-white/70" />
-                                ) : (
-                                    <ChevronDown className="h-4 w-4 text-white/70" />
-                                )}
-                            </button>
-
-                            <AnimatePresence>
-                                {eventPanelOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -8 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -8 }}
-                                        className="mt-2 rounded-[var(--radius-lg)] bg-black/65 p-3 backdrop-blur-md"
-                                    >
-                                        <p className="mb-2 text-[11px] text-white/75">Pilih event yang ingin discan</p>
-                                        <Select
-                                            value={eventId}
-                                            onChange={handleEventChange}
-                                            options={eventOptions}
-                                            className="[&_button]:!bg-white/10 [&_button]:!text-white [&_button]:!border-white/20 [&_svg]:!text-white/70"
-                                        />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </>
-                    )}
-                </div>
-            </header>
-
-            {/*
-              Bottom bar — single row (hint chip + manual button), centered.
-              The hint is now an inline chip (not a toggleable info dialog),
-              which removes one tap target and keeps everything on one line.
-            */}
-            <footer
-                className="absolute inset-x-0 z-30 flex flex-col items-center gap-2 px-4 pb-2 sm:px-6"
-                style={{ bottom: BOTTOM_SAFE_OFFSET }}
-            >
-                <p className="inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-[11px] text-white/85 backdrop-blur-md">
-                    <ScanLine className="h-3.5 w-3.5" />
-                    Arahkan QR ke tengah bingkai
-                </p>
-                <button
-                    onClick={() => setManualOpen(true)}
-                    className="flex h-11 items-center gap-2 rounded-full bg-[color:var(--brand-600)] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--brand-700)] active:scale-[0.98]"
-                >
-                    <Keyboard className="h-4 w-4" />
-                    Input Manual
-                </button>
-            </footer>
-
-            {/*
-              Last result toast.
-              Positioned with `clamp()` so it always sits in the gap between
-              the header and the reticle, regardless of whether the event
-              panel is expanded or which device the admin is on. Max width
-              is capped to 92vw so on tablets it stays a focused chip rather
-              than stretching across the camera view.
-            */}
-            <AnimatePresence>
-                {lastResult && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -16, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -16, scale: 0.95 }}
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                        className={cn(
-                            'pointer-events-none absolute left-1/2 z-30 w-[min(92vw,420px)] -translate-x-1/2 rounded-[var(--radius-lg)] border p-3 backdrop-blur-md',
-                            lastResult.ok
-                                ? 'border-emerald-400/40 bg-emerald-500/30'
-                                : 'border-red-400/40 bg-red-500/30',
-                        )}
-                        style={{
-                            top: 'calc(env(safe-area-inset-top, 0px) + 124px)',
-                        }}
-                    >
-                        <div className="flex items-start gap-2.5">
-                            {lastResult.ok ? (
-                                <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-200" />
-                            ) : (
-                                <XCircle className="h-5 w-5 flex-shrink-0 text-red-200" />
-                            )}
-                            <div className="min-w-0 flex-1">
-                                {lastResult.ok ? (
-                                    <>
-                                        <Ellipsis as="p" className="text-sm font-semibold">
-                                            {lastResult.attendance?.nama}
-                                        </Ellipsis>
-                                        <p className="text-xs text-white/85">
-                                            NIM {lastResult.attendance?.nim} · {lastResult.attendance?.status_label}
-                                            {lastResult.attendance?.check_in_time
-                                                ? ` · ${lastResult.attendance.check_in_time}`
-                                                : ''}
-                                        </p>
-                                    </>
-                                ) : (
-                                    <p className="text-sm font-medium">{lastResult.message}</p>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/*
-              Manual input — now uses the project-wide Sheet primitive so the
-              animation, focus trap, and keyboard handling match dialogs in
-              the rest of the app (event detail, dashboard, members).
-            */}
+            {/* Manual input sheet */}
             <Sheet
                 open={manualOpen}
                 onClose={() => setManualOpen(false)}
@@ -562,10 +563,10 @@ export default function ScannerPage({ activeEvents }) {
                             aria-selected={manualMode === 'qr'}
                             onClick={() => setManualMode('qr')}
                             className={cn(
-                                'rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition',
+                                'rounded-[var(--radius-pill)] px-4 py-2 text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] transition',
                                 manualMode === 'qr'
-                                    ? 'bg-[color:var(--brand-600)] text-white shadow-sm'
-                                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
+                                    ? 'bg-[color:var(--ink-deep)] text-[color:var(--canvas)]'
+                                    : 'bg-[color:var(--canvas)] text-[color:var(--ink)] border border-[color:var(--hairline)] hover:bg-[color:var(--surface-soft)]',
                             )}
                         >
                             Kode QR
@@ -576,10 +577,10 @@ export default function ScannerPage({ activeEvents }) {
                             aria-selected={manualMode === 'nim'}
                             onClick={() => setManualMode('nim')}
                             className={cn(
-                                'rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition',
+                                'rounded-[var(--radius-pill)] px-4 py-2 text-sm font-bold leading-[1.43] [letter-spacing:-0.14px] transition',
                                 manualMode === 'nim'
-                                    ? 'bg-[color:var(--brand-600)] text-white shadow-sm'
-                                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
+                                    ? 'bg-[color:var(--ink-deep)] text-[color:var(--canvas)]'
+                                    : 'bg-[color:var(--canvas)] text-[color:var(--ink)] border border-[color:var(--hairline)] hover:bg-[color:var(--surface-soft)]',
                             )}
                         >
                             NIM
@@ -643,7 +644,7 @@ export default function ScannerPage({ activeEvents }) {
                     </div>
                 </form>
             </Sheet>
-        </div>
+        </>
     );
 }
 
@@ -656,4 +657,97 @@ function Corner({ className }) {
             )}
         />
     );
+}
+
+const STATUS_CONFIG = {
+    hadir: { tone: 'success', label: 'Hadir' },
+    terlambat: { tone: 'warning', label: 'Terlambat' },
+    izin: { tone: 'info', label: 'Izin' },
+    sakit: { tone: 'info', label: 'Sakit' },
+    alpha: { tone: 'danger', label: 'Alpha' },
+};
+
+/**
+ * RecentScansPanel — light strip beneath the dark scanner block.
+ *
+ * Filters to the currently-selected event so the operator sees only the
+ * stream relevant to their station. When no event is selected (or the
+ * filtered list is empty), shows the empty state.
+ *
+ * Capped at 36vh with internal scroll so the panel never starves the
+ * camera viewport on small phones.
+ */
+function RecentScansPanel({ items, selectedEventId }) {
+    const filtered = useMemo(() => {
+        if (!selectedEventId) return items;
+        return items.filter((a) => a.event_id === selectedEventId);
+    }, [items, selectedEventId]);
+
+    return (
+        <section
+            className="relative z-30 shrink-0 border-t border-[color:var(--hairline-soft)] bg-[color:var(--canvas)] px-3 pb-[env(safe-area-inset-bottom,8px)] pt-2 sm:px-4"
+            style={{ maxHeight: '36vh' }}
+        >
+            <div className="mb-1.5 flex items-center justify-between px-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--steel)]">
+                    Absensi Terbaru
+                </p>
+                {filtered.length > 0 && (
+                    <span className="text-[10px] text-[color:var(--steel)]">
+                        {filtered.length} entri
+                    </span>
+                )}
+            </div>
+
+            {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-[color:var(--hairline)] px-3 py-4 text-center">
+                    <ScanLine className="h-4 w-4 text-[color:var(--steel)]" />
+                    <p className="text-xs text-[color:var(--charcoal)]">Belum ada absensi tercatat</p>
+                </div>
+            ) : (
+                <ul
+                    className="flex flex-col gap-1.5 overflow-y-auto pr-0.5"
+                    style={{ maxHeight: 'calc(36vh - 36px)' }}
+                >
+                    {filtered.map((a) => {
+                        const cfg = STATUS_CONFIG[a.status] ?? { tone: 'neutral', label: a.status_label ?? a.status };
+                        return (
+                            <li
+                                key={a.id}
+                                className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[color:var(--hairline-soft)] bg-[color:var(--surface-soft)] px-2.5 py-1.5"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <Ellipsis as="p" className="text-xs font-semibold text-[color:var(--ink-deep)]">
+                                        {a.nama}
+                                    </Ellipsis>
+                                    <p className="text-[10px] text-[color:var(--steel)]">
+                                        NIM {a.nim}
+                                    </p>
+                                </div>
+                                <Badge tone={cfg.tone} size="sm" className="shrink-0">
+                                    {cfg.label}
+                                </Badge>
+                                <span className="hidden shrink-0 items-center gap-0.5 text-[10px] text-[color:var(--steel)] sm:flex">
+                                    <Clock className="h-3 w-3" />
+                                    {formatScanTime(a.check_in_time)}
+                                </span>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+/**
+ * Backend serializes check_in_time as `dd MMM yyyy, HH:mm:ss`. The full
+ * string is too noisy in a dense list, so trim to just the time tail.
+ */
+function formatScanTime(value) {
+    if (!value) return '';
+    const idx = value.lastIndexOf(', ');
+    const tail = idx >= 0 ? value.slice(idx + 2) : value;
+    // Drop seconds: 14:32:05 → 14:32
+    return tail.split(':').slice(0, 2).join(':');
 }

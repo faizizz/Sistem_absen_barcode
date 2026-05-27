@@ -13,6 +13,7 @@ import { Sheet } from '@/components/primitives/Sheet';
 import { DataTable } from '@/components/composite/DataTable';
 import { EmptyState } from '@/components/composite/EmptyState';
 import { ExportDialog } from '@/components/composite/ExportDialog';
+import { Pagination } from '@/components/composite/Pagination';
 import { cn } from '@/lib/cn';
 import {
     UserCheck,
@@ -52,16 +53,16 @@ const EVENT_STATUS = {
 
 const POLL_INTERVAL_MS = 7000;
 
-export default function EventShow({ event, members, summary }) {
+export default function EventShow({ event, members, summary, filters = {}, departments = [] }) {
     const [permissionTarget, setPermissionTarget] = useState(null);
     const [exportOpen, setExportOpen] = useState(false);
     const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
     const [revokeTarget, setRevokeTarget] = useState(null);
 
     // Filters
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [deptFilter, setDeptFilter] = useState('');
-    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState(filters?.status ?? 'all');
+    const [deptFilter, setDeptFilter] = useState(filters?.departemen ?? '');
+    const [search, setSearch] = useState(filters?.search ?? '');
 
     // Auto-refresh state
     const isActive = event.status === 'active';
@@ -69,6 +70,14 @@ export default function EventShow({ event, members, summary }) {
     const [lastRefreshed, setLastRefreshed] = useState(() => new Date());
     const [refreshing, setRefreshing] = useState(false);
     const pollRef = useRef(null);
+    const memberRows = members?.data ?? [];
+    const filteredTotal = members?.total ?? memberRows.length;
+
+    useEffect(() => {
+        setSearch(filters?.search ?? '');
+        setStatusFilter(filters?.status ?? 'all');
+        setDeptFilter(filters?.departemen ?? '');
+    }, [filters?.search, filters?.status, filters?.departemen]);
 
     // Track when fresh data arrives via Inertia partial reloads
     useEffect(() => {
@@ -78,10 +87,43 @@ export default function EventShow({ event, members, summary }) {
     function reloadData(silent = false) {
         if (!silent) setRefreshing(true);
         router.reload({
-            only: ['members', 'summary', 'event'],
+            only: ['members', 'summary', 'event', 'filters', 'departments'],
             preserveScroll: true,
             preserveState: true,
             onFinish: () => setRefreshing(false),
+        });
+    }
+
+    function filterParams(overrides = {}) {
+        const params = {
+            search,
+            status: statusFilter,
+            departemen: deptFilter,
+            ...overrides,
+        };
+
+        if (!params.search?.trim()) delete params.search;
+        if (!params.status || params.status === 'all') delete params.status;
+        if (!params.departemen) delete params.departemen;
+        if (!params.page) delete params.page;
+
+        return params;
+    }
+
+    function applyFilters(overrides = {}) {
+        router.get(`/kuasa/events/${event.id}`, filterParams(overrides), {
+            preserveScroll: true,
+            preserveState: true,
+        });
+    }
+
+    function resetFilters() {
+        setStatusFilter('all');
+        setDeptFilter('');
+        setSearch('');
+        router.get(`/kuasa/events/${event.id}`, {}, {
+            preserveScroll: true,
+            preserveState: true,
         });
     }
 
@@ -127,32 +169,19 @@ export default function EventShow({ event, members, summary }) {
 
     const statusCfg = EVENT_STATUS[event.status] ?? EVENT_STATUS.draft;
 
-    // Departments present in this event's roster (for filter chips)
-    const deptOptions = useMemo(() => {
-        const set = new Set(members.map((m) => m.departemen).filter(Boolean));
-        return Array.from(set).sort();
-    }, [members]);
-
-    // Apply filters client-side
-    const filteredMembers = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return members.filter((m) => {
-            const memberStatus = m.attendance?.status ?? 'belum';
-            if (statusFilter !== 'all' && memberStatus !== statusFilter) return false;
-            if (deptFilter && m.departemen !== deptFilter) return false;
-            if (q) {
-                const haystack = `${m.nama} ${m.nim}`.toLowerCase();
-                if (!haystack.includes(q)) return false;
-            }
-            return true;
-        });
-    }, [members, statusFilter, deptFilter, search]);
-
-    const noFilteredMembers = filteredMembers.length === 0;
-    const filtersActive = statusFilter !== 'all' || deptFilter !== '' || search.trim() !== '';
+    const deptOptions = useMemo(() => departments.map((d) => ({ value: d, label: d })), [departments]);
+    const noFilteredMembers = memberRows.length === 0;
+    const filtersActive =
+        (filters?.status ?? 'all') !== 'all' ||
+        (filters?.departemen ?? '') !== '' ||
+        (filters?.search ?? '').trim() !== '';
+    const filtersTouched =
+        search !== (filters?.search ?? '') ||
+        statusFilter !== (filters?.status ?? 'all') ||
+        deptFilter !== (filters?.departemen ?? '');
 
     // Action availability gates
-    const belumHadirCount = members.filter((m) => !m.attendance).length;
+    const belumHadirCount = summary.belum ?? 0;
     const canMarkAlpha = belumHadirCount > 0 && event.status === 'closed';
 
     const columns = [
@@ -266,8 +295,8 @@ export default function EventShow({ event, members, summary }) {
                         title="Daftar Anggota"
                         subtitle={
                             filtersActive
-                                ? `${filteredMembers.length} dari ${members.length} anggota`
-                                : `${members.length} anggota target event ini`
+                                ? `${filteredTotal} dari ${summary.total_members} anggota`
+                                : `${summary.total_members} anggota target event ini`
                         }
                     />
                     <div className="flex flex-wrap items-center gap-2">
@@ -307,8 +336,13 @@ export default function EventShow({ event, members, summary }) {
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_200px_220px_auto]">
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        applyFilters({ page: undefined });
+                    }}
+                    className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_200px_220px_auto_auto]"
+                >
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
                         <Input
@@ -320,9 +354,12 @@ export default function EventShow({ event, members, summary }) {
                     </div>
                     <Select
                         value={statusFilter}
-                        onChange={setStatusFilter}
+                        onChange={(value) => {
+                            setStatusFilter(value);
+                            applyFilters({ status: value, page: undefined });
+                        }}
                         options={[
-                            { value: 'all', label: `Semua status (${members.length})` },
+                            { value: 'all', label: `Semua status (${summary.total_members})` },
                             { value: 'hadir', label: `Hadir (${summary.hadir})` },
                             { value: 'terlambat', label: `Terlambat (${summary.terlambat})` },
                             { value: 'izin', label: `Izin (${summary.izin})` },
@@ -334,34 +371,36 @@ export default function EventShow({ event, members, summary }) {
                     {deptOptions.length > 1 ? (
                         <Select
                             value={deptFilter}
-                            onChange={setDeptFilter}
+                            onChange={(value) => {
+                                setDeptFilter(value);
+                                applyFilters({ departemen: value, page: undefined });
+                            }}
                             options={[
                                 { value: '', label: 'Semua departemen' },
-                                ...deptOptions.map((d) => ({ value: d, label: d })),
+                                ...deptOptions,
                             ]}
                         />
                     ) : (
                         <div className="hidden sm:block" />
                     )}
+                    <Button type="submit" variant="primary" size="md" disabled={!filtersTouched}>
+                        Cari
+                    </Button>
                     <Button
                         type="button"
                         variant="ghost"
                         size="md"
-                        onClick={() => {
-                            setStatusFilter('all');
-                            setDeptFilter('');
-                            setSearch('');
-                        }}
+                        onClick={resetFilters}
                         disabled={!filtersActive}
                     >
                         Reset Filter
                     </Button>
-                </div>
+                </form>
 
                 <div className="mt-4">
                     <DataTable
                         columns={columns}
-                        rows={filteredMembers}
+                        rows={memberRows}
                         rowKey="user_id"
                         emptyState={
                             <EmptyState
@@ -375,6 +414,7 @@ export default function EventShow({ event, members, summary }) {
                             />
                         }
                     />
+                    <Pagination links={members?.links} className="mt-6" />
                 </div>
             </Card>
 

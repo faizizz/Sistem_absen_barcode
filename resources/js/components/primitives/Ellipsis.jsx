@@ -183,7 +183,7 @@ export function Ellipsis({
                                       zIndex: 60,
                                   }}
                                   className={cn(
-                                      'max-w-sm break-words rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-raised)] px-3 py-2 text-sm text-[color:var(--text-primary)] shadow-[var(--shadow-md)]',
+                                      'max-w-sm break-words rounded-[var(--radius-lg)] border border-[color:var(--hairline-soft)] bg-[color:var(--canvas)] px-3 py-2 text-sm text-[color:var(--ink-deep)] shadow-[var(--shadow-md)]',
                                       tooltipClassName,
                                   )}
                               >

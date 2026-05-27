@@ -6,6 +6,10 @@ import { Input } from '@/components/primitives/Input';
 import { Select } from '@/components/primitives/Select';
 import { Download } from 'lucide-react';
 
+/**
+ * ExportDialog — Meta-flow: ghost "Batal" + cobalt commerce CTA.
+ * The dialog itself is rendered by `Dialog` (24px radius, ink overlay).
+ */
 export function ExportDialog({
     open,
     onClose,
@@ -54,7 +58,7 @@ export function ExportDialog({
                 <>
                     <Button variant="ghost" onClick={onClose}>Batal</Button>
                     <Button
-                        variant="primary"
+                        variant="buy"
                         leftIcon={<Download className="h-4 w-4" />}
                         onClick={handleSubmit}
                     >
@@ -63,7 +67,7 @@ export function ExportDialog({
                 </>
             }
         >
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
                 {!lockedEventId && (
                     <Field
                         label="Event"
@@ -77,7 +81,7 @@ export function ExportDialog({
                     </Field>
                 )}
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field label="Dari tanggal" hint="Opsional" htmlFor="export-from">
                         <Input
                             id="export-from"
@@ -97,7 +101,7 @@ export function ExportDialog({
                     </Field>
                 </div>
 
-                <p className="text-xs text-[color:var(--text-muted)]">
+                <p className="text-xs leading-relaxed text-[color:var(--steel)]">
                     Sheet yang dihasilkan: Ringkasan event, detail per event, rekap individu anggota.
                 </p>
             </form>

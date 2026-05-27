@@ -8,6 +8,7 @@ use App\Http\Resources\EventResource;
 use App\Models\Event;
 use App\Services\DashboardQueryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,15 +50,19 @@ class AdminDashboardController extends Controller
             'overview' => $stats['overview'],
             'recentAttendances' => $recentAttendances,
             'todayEvents' => $todayEvents,
-            'exportableEvents' => Event::orderByDesc('tanggal')
-                ->limit(100)
-                ->get(['id', 'nama_kegiatan', 'tanggal'])
-                ->map(fn (Event $event) => [
-                    'id' => $event->id,
-                    'nama_kegiatan' => $event->nama_kegiatan,
-                    'tanggal' => $event->tanggal?->format('Y-m-d'),
-                ])
-                ->values(),
+            'exportableEvents' => Cache::remember(
+                'exportable-events',
+                300,
+                fn () => Event::orderByDesc('tanggal')
+                    ->limit(100)
+                    ->get(['id', 'nama_kegiatan', 'tanggal'])
+                    ->map(fn (Event $event) => [
+                        'id' => $event->id,
+                        'nama_kegiatan' => $event->nama_kegiatan,
+                        'tanggal' => $event->tanggal?->format('Y-m-d'),
+                    ])
+                    ->values(),
+            ),
         ]);
     }
 }

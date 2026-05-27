@@ -64,7 +64,7 @@ export default function LoginPage() {
                         <button
                             type="button"
                             onClick={() => setShowPass((v) => !v)}
-                            className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-[var(--radius-sm)] text-[color:var(--text-muted)] hover:bg-[color:var(--surface-base)] hover:text-[color:var(--text-primary)]"
+                            className="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--canvas)] text-[color:var(--ink)] hover:bg-[color:var(--surface-soft)]"
                             aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'}
                         >
                             {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

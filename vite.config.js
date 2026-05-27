@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import compression from 'vite-plugin-compression';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,6 +16,7 @@ export default defineConfig({
         }),
         react(),
         tailwindcss(),
+        compression({ algorithm: 'gzip' }),
     ],
     resolve: {
         alias: {

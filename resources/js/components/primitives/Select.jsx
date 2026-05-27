@@ -1,8 +1,22 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } from '@headlessui/react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { Fragment } from 'react';
 import { cn } from '@/lib/cn';
 
+/**
+ * Select — visually matched to the Input control.
+ *
+ * Trigger:
+ *   - 44px tall, hairline 1px, 8px radius, body-md typography
+ *   - on focus the border swaps to fb-blue 2px (text-input-focused)
+ *   - inset padding compensates so the box doesn't shift size
+ *
+ * Popup:
+ *   - canvas surface, hairline border, 8px radius, level-2 shadow
+ *   - active option uses surface-soft background
+ *   - selected option carries cobalt check icon (matches `radio-option-selected`
+ *     cobalt-on-canvas signaling)
+ */
 export function Select({
     value,
     onChange,
@@ -21,13 +35,15 @@ export function Select({
             <div className={cn('relative', className)}>
                 <ListboxButton
                     className={cn(
-                        'flex w-full min-h-11 items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-default)] bg-[color:var(--surface-raised)] px-4 py-2.5 text-left text-sm text-[color:var(--text-primary)] transition-shadow focus:outline-none focus:border-[color:var(--brand-500)] focus:shadow-[var(--shadow-focus-ring)] disabled:opacity-60',
+                        'flex w-full h-11 items-center justify-between rounded-[var(--radius-lg)] border border-[color:var(--hairline)] bg-[color:var(--canvas)] px-3 py-3 text-left text-base [letter-spacing:-0.16px] text-[color:var(--ink)] transition-colors',
+                        'focus:outline-none data-[focus]:border-[color:var(--fb-blue)] data-[focus]:border-2 data-[focus]:px-[11px] data-[focus]:py-[11px]',
+                        'disabled:opacity-60',
                     )}
                 >
-                    <span className={cn(!selected && 'text-[color:var(--text-muted)]')}>
+                    <span className={cn(!selected && 'text-[color:var(--steel)]')}>
                         {selected ? optionLabel(selected) : placeholder}
                     </span>
-                    <ChevronsUpDown className="h-4 w-4 text-[color:var(--text-muted)]" />
+                    <ChevronDown className="h-4 w-4 text-[color:var(--steel)]" />
                 </ListboxButton>
                 <Transition
                     as={Fragment}
@@ -42,7 +58,7 @@ export function Select({
                         portal
                         anchor={{ to: 'bottom start', gap: '6px' }}
                         modal={false}
-                        className="z-[100] max-h-72 w-[var(--button-width)] overflow-auto rounded-[var(--radius-md)] border border-[color:var(--border-default)] bg-[color:var(--surface-raised)] p-1 shadow-[var(--shadow-lg)] focus:outline-none app-scrollbar"
+                        className="z-[100] max-h-72 w-[var(--button-width)] overflow-auto rounded-[var(--radius-lg)] border border-[color:var(--hairline-soft)] bg-[color:var(--canvas)] p-1.5 shadow-[var(--shadow-md)] focus:outline-none app-scrollbar"
                     >
                         {options.map((opt) => {
                             const v = optionValue(opt);
@@ -54,19 +70,19 @@ export function Select({
                                     disabled={isDisabled}
                                     className={({ focus, selected: isSel, disabled: optDisabled }) =>
                                         cn(
-                                            'flex items-center justify-between gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-sm',
+                                            'flex items-center justify-between gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm [letter-spacing:-0.14px]',
                                             optDisabled
                                                 ? 'cursor-not-allowed opacity-50'
                                                 : 'cursor-pointer',
-                                            focus && !optDisabled && 'bg-[color:var(--surface-base)] text-[color:var(--text-primary)] dark:bg-[rgba(255,255,255,0.06)]',
-                                            isSel && 'font-semibold',
+                                            focus && !optDisabled && 'bg-[color:var(--surface-soft)] text-[color:var(--ink-deep)]',
+                                            isSel && 'font-bold text-[color:var(--ink-deep)]',
                                         )
                                     }
                                 >
                                     {({ selected: isSel }) => (
                                         <>
                                             <span>{optionLabel(opt)}</span>
-                                            {isSel && <Check className="h-4 w-4 text-[color:var(--brand-600)]" />}
+                                            {isSel && <Check className="h-4 w-4 text-[color:var(--primary)]" />}
                                         </>
                                     )}
                                 </ListboxOption>

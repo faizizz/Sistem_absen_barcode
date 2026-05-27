@@ -3,11 +3,15 @@ import { Fragment } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
+/**
+ * Sheet — slide-in panel (mobile bottom drawer or right-side rail).
+ * Mirrors the DESIGN.md sticky-bottom-bar pattern used on PDP at < 768px.
+ */
 export function Sheet({ open, onClose, title, description, children, side = 'right' }) {
     const sideClasses = {
         right: {
             container: 'justify-end',
-            panel: 'h-full w-full sm:max-w-md rounded-l-[var(--radius-xl)] sm:rounded-l-[var(--radius-2xl)] sm:rounded-r-none',
+            panel: 'h-full w-full sm:max-w-md sm:rounded-l-[var(--radius-2xl)] sm:rounded-r-none',
             enterFrom: 'translate-x-full',
             enterTo: 'translate-x-0',
             leaveFrom: 'translate-x-0',
@@ -15,7 +19,7 @@ export function Sheet({ open, onClose, title, description, children, side = 'rig
         },
         bottom: {
             container: 'items-end justify-center',
-            panel: 'w-full max-h-[85vh] rounded-t-[var(--radius-2xl)]',
+            panel: 'w-full max-h-[85vh] rounded-t-[var(--radius-3xl)]',
             enterFrom: 'translate-y-full',
             enterTo: 'translate-y-0',
             leaveFrom: 'translate-y-0',
@@ -36,7 +40,11 @@ export function Sheet({ open, onClose, title, description, children, side = 'rig
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 bg-black/55 backdrop-blur-sm" aria-hidden="true" />
+                    <div
+                        className="fixed inset-0 backdrop-blur-sm"
+                        style={{ background: 'rgba(10, 19, 23, 0.55)' }}
+                        aria-hidden="true"
+                    />
                 </TransitionChild>
 
                 <div className={cn('fixed inset-0 z-50 flex', cfg.container)}>
@@ -51,25 +59,26 @@ export function Sheet({ open, onClose, title, description, children, side = 'rig
                     >
                         <DialogPanel
                             className={cn(
-                                'relative flex flex-col bg-[color:var(--surface-raised)] shadow-[var(--shadow-lg)]',
+                                'relative flex flex-col bg-[color:var(--canvas)] shadow-[var(--shadow-md)]',
                                 cfg.panel,
                             )}
                         >
-                            <header className="flex items-start justify-between gap-4 border-b border-[color:var(--border-subtle)] px-5 py-4">
-                                <div>
+                            <header className="flex items-start justify-between gap-4 border-b border-[color:var(--hairline-soft)] px-5 py-4">
+                                <div className="min-w-0">
                                     {title && (
-                                        <DialogTitle className="text-base font-semibold tracking-tight">
+                                        <DialogTitle className="meta-heading-sm text-[color:var(--ink-deep)]">
                                             {title}
                                         </DialogTitle>
                                     )}
                                     {description && (
-                                        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{description}</p>
+                                        <p className="mt-1.5 text-base [letter-spacing:-0.16px] leading-[1.5] text-[color:var(--charcoal)]">{description}</p>
                                     )}
                                 </div>
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="rounded-[var(--radius-sm)] p-1.5 text-[color:var(--text-muted)] hover:bg-[color:var(--surface-glass)] hover:text-[color:var(--text-primary)]"
+                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--canvas)] text-[color:var(--ink)] hover:bg-[color:var(--surface-soft)]"
+                                    aria-label="Tutup"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>

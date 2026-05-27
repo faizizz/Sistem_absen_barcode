@@ -3,153 +3,235 @@
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 /* ============================================================
-   Design Tokens — Sistem Absen (premium dashboard)
-   Mobile-first. Light + Dark via [data-theme="dark"] swap.
+   Design Tokens — Meta commerce design language
+   Reference: DESIGN.md (Meta hardware commerce surfaces).
+   Stark white canvas, cobalt commerce CTAs (#0064e0), ink-deep
+   marketing CTAs, pill buttons (100px radius), 32–40px photographic
+   card radii, hairline 1px grays, Optimistic VF (Inter fallback)
+   typography with -0.14/-0.16 letter-spacing on body roles.
    ============================================================ */
 
 :root,
 [data-theme='light'] {
   color-scheme: light;
 
-  /* Brand: cyan-teal primary actions */
-  --brand-50: #ecfeff;
-  --brand-100: #cffafe;
-  --brand-200: #a5f3fc;
-  --brand-300: #67e8f9;
-  --brand-400: #22d3ee;
-  --brand-500: #06b6d4;
-  --brand-600: #0891b2;
-  --brand-700: #0e7490;
-  --brand-800: #155e75;
-  --brand-900: #164e63;
-  --brand-950: #083344;
+  /* ---------- Meta-native tokens ---------- */
 
-  /* Accent: blue-slate highlights */
-  --accent-50: #eef4ff;
-  --accent-100: #dce8fb;
-  --accent-200: #bfd4f3;
-  --accent-300: #93b5e4;
-  --accent-400: #5f8fce;
-  --accent-500: #3d72b8;
-  --accent-600: #315f91;
-  --accent-700: #294d74;
-  --accent-800: #263f5f;
-  --accent-900: #20344e;
-
-  /* Neutral: warm slate */
-  --neutral-0: #ffffff;
-  --neutral-50: #f7f8fb;
-  --neutral-100: #eef0f6;
-  --neutral-200: #dde1ec;
-  --neutral-300: #c4cad9;
-  --neutral-400: #97a0b4;
-  --neutral-500: #6c768f;
-  --neutral-600: #4c5670;
-  --neutral-700: #353e54;
-  --neutral-800: #232a3c;
-  --neutral-900: #141925;
-  --neutral-950: #0a0d15;
-
-  /* Surfaces */
-  --surface-base: var(--neutral-50);
-  --surface-raised: var(--neutral-0);
-  --surface-overlay: rgba(255, 255, 255, 0.85);
-  --surface-glass: rgba(255, 255, 255, 0.55);
-  --surface-inverse: var(--neutral-900);
-
-  --border-subtle: var(--neutral-200);
-  --border-default: var(--neutral-300);
-  --border-strong: var(--neutral-400);
-
-  --text-primary: var(--neutral-900);
-  --text-secondary: var(--neutral-600);
-  --text-muted: var(--neutral-500);
-  --text-inverse: var(--neutral-0);
-  --text-accent: var(--accent-700);
+  /* Brand & accent */
+  --primary: #0064e0;          /* cobalt — buy-now CTAs only */
+  --primary-deep: #0457cb;     /* pressed cobalt */
+  --primary-soft: #0091ff;     /* informational tint */
+  --on-primary: #ffffff;
+  --ink-button: #000000;       /* black — marketing CTAs */
+  --on-ink-button: #ffffff;
+  --fb-blue: #1876f2;          /* form-control activation */
+  --meta-link: #385898;        /* legacy nav links */
+  --oculus-purple: #a121ce;    /* category accent */
 
   /* Semantic */
-  --success-bg: #e7f7ee;
-  --success-fg: #0d6b3a;
-  --success-border: #b2e6c8;
-  --warning-bg: #fdf4d8;
+  --success: #31a24c;
+  --success-bg-strong: #24e400;
+  --attention: #f2a918;
+  --warning: #f7b928;
+  --warning-bg-strong: #ffe200;
+  --critical: #e41e3f;
+  --critical-strong: #f0284a;
+
+  /* Surface */
+  --canvas: #ffffff;
+  --surface-soft: #f1f4f7;     /* subtle product-thumbnail bg */
+
+  /* Ink (text) */
+  --ink-deep: #0a1317;         /* primary headlines + body on light */
+  --ink: #1c1e21;              /* standard body */
+  --charcoal: #444950;         /* tertiary body */
+  --slate: #4b4c4f;            /* section header copy */
+  --steel: #5d6c7b;            /* caption / footer link */
+  --stone: #8595a4;            /* disabled / de-emphasized */
+  --hairline: #ced0d4;
+  --hairline-soft: #dee3e9;
+  --disabled-text: #bcc0c4;
+
+  /* ---------- Compatibility shim — keep old token names alive ---------- */
+  /* The whole app already references --brand-*, --accent-*, --surface-*,
+     --text-*, --border-*, --radius-*. We rebind those names so existing
+     components inherit the Meta palette without per-file rewrites. */
+
+  --brand-50: #ecf2ff;
+  --brand-100: #d8e5ff;
+  --brand-200: #b3cbff;
+  --brand-300: #7ea9ff;
+  --brand-400: #4d8aff;
+  --brand-500: #1f70f5;
+  --brand-600: #0064e0;        /* = --primary */
+  --brand-700: #0457cb;        /* = --primary-deep */
+  --brand-800: #0143b5;
+  --brand-900: #0a3a8c;
+  --brand-950: #051f4d;
+
+  --accent-50: #ecf2ff;
+  --accent-100: #d6e3fb;
+  --accent-200: #b6c8f0;
+  --accent-300: #8fa9dd;
+  --accent-400: #5e84c7;
+  --accent-500: #3d6db4;
+  --accent-600: #305898;
+  --accent-700: #294879;
+  --accent-800: #233c63;
+  --accent-900: #1c324f;
+
+  --neutral-0: #ffffff;
+  --neutral-50: #f7f8fa;
+  --neutral-100: #f1f4f7;      /* = surface-soft */
+  --neutral-200: #dee3e9;      /* = hairline-soft */
+  --neutral-300: #ced0d4;      /* = hairline */
+  --neutral-400: #8595a4;      /* = stone */
+  --neutral-500: #5d6c7b;      /* = steel */
+  --neutral-600: #4b4c4f;      /* = slate */
+  --neutral-700: #444950;      /* = charcoal */
+  --neutral-800: #1c1e21;      /* = ink */
+  --neutral-900: #0a1317;      /* = ink-deep */
+  --neutral-950: #050a0d;
+
+  /* Surfaces — re-aliased onto canvas / surface-soft */
+  --surface-base: var(--surface-soft);
+  --surface-raised: var(--canvas);
+  --surface-overlay: rgba(255, 255, 255, 0.92);
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-inverse: var(--ink-deep);
+
+  --border-subtle: var(--hairline-soft);
+  --border-default: var(--hairline);
+  --border-strong: var(--steel);
+
+  --text-primary: var(--ink-deep);
+  --text-secondary: var(--charcoal);
+  --text-muted: var(--steel);
+  --text-inverse: var(--canvas);
+  --text-accent: var(--primary-deep);
+
+  /* Semantic compat blocks */
+  --success-bg: #e6f5ec;
+  --success-fg: #1f7a3a;
+  --success-border: #b9e0c5;
+  --warning-bg: #fff5d9;
   --warning-fg: #8a6300;
-  --warning-border: #f1d97a;
-  --danger-bg: #fde7eb;
+  --warning-border: #f3dc8a;
+  --danger-bg: #fde8ec;
   --danger-fg: #b3162f;
-  --danger-border: #f5b6c1;
-  --info-bg: #e7eefe;
-  --info-fg: #1d4ed8;
-  --info-border: #b7c6f5;
+  --danger-border: #f4b6c0;
+  --info-bg: #e3edff;
+  --info-fg: #0457cb;
+  --info-border: #b9cbf3;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(20, 25, 37, 0.05);
-  --shadow-sm: 0 2px 6px rgba(20, 25, 37, 0.06);
-  --shadow-md: 0 8px 24px rgba(20, 25, 37, 0.08);
-  --shadow-lg: 0 18px 40px rgba(20, 25, 37, 0.12);
-  --shadow-glass: 0 1px 2px rgba(20, 25, 37, 0.04), 0 12px 32px rgba(8, 145, 178, 0.12);
-  --shadow-focus-ring: 0 0 0 4px rgba(6, 182, 212, 0.24);
+  /* ---------- Geometry ---------- */
+  /* Pill (100px) is THE brand signature. Photographic cards = xxxl/feature. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;             /* squared thumbnails */
+  --radius-lg: 8px;             /* form inputs, radio-options */
+  --radius-xl: 16px;            /* feature/FAQ cards */
+  --radius-2xl: 24px;           /* warranty / accessory tiles */
+  --radius-3xl: 32px;           /* photographic feature cards */
+  --radius-feature: 40px;       /* accessory hero panels */
+  --radius-pill: 100px;         /* every button, every chip */
+  --radius-full: 9999px;        /* legacy alias */
 
-  /* Radii */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-  --radius-full: 9999px;
+  /* ---------- Shadows ---------- */
+  /* DESIGN.md elevation rules — strictly two interaction layers:
+     - Level 1 (subtle): `rgba(0,0,0,0.2) 1px 1px 0px 0px` — pill-tab activation
+     - Level 2 (sticky panel): `rgba(20,22,26,0.3) 0px 1px 4px 0px` — PDP rail,
+       sticky mobile bar, popovers, dialogs, tooltips, toasts.
+     The system runs predominantly flat. */
+  --shadow-xs: 0 1px 1px rgba(20, 22, 26, 0.04);
+  --shadow-sm: rgba(0, 0, 0, 0.20) 1px 1px 0px 0px;       /* Level 1 */
+  --shadow-md: rgba(20, 22, 26, 0.30) 0px 1px 4px 0px;    /* Level 2 — primary */
+  --shadow-lg: rgba(20, 22, 26, 0.30) 0px 1px 4px 0px;    /* Level 2 — alias */
+  --shadow-glass: rgba(20, 22, 26, 0.30) 0px 1px 4px 0px; /* Level 2 — alias */
+  --shadow-focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--fb-blue);
 
-  /* Motion */
-  --duration-fast: 120ms;
+  /* ---------- Motion ---------- */
+  --duration-fast: 150ms;
   --duration: 200ms;
-  --duration-slow: 320ms;
+  --duration-slow: 300ms;
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Layout */
-  --shell-sidebar-w: 256px;
+  /* ---------- Layout ---------- */
+  --shell-sidebar-w: 264px;
   --shell-sidebar-collapsed-w: 72px;
   --shell-topbar-h: 64px;
   --shell-bottomnav-h: 64px;
+  --container-marketing: 1280px;
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --surface-base: var(--neutral-950);
-  --surface-raised: var(--neutral-900);
-  --surface-overlay: rgba(20, 25, 37, 0.85);
-  --surface-glass: rgba(35, 42, 60, 0.55);
-  --surface-inverse: var(--neutral-50);
+  /* DESIGN.md Known Gaps: Meta has not surfaced a published dark-mode token
+     set on its commerce surfaces. We implement a respectful inversion that
+     keeps cobalt as the commerce CTA and ink-deep as the canvas inverse. */
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  --canvas: #0a1317;
+  --surface-soft: #14191f;
+  --ink-deep: #f7f8fa;
+  --ink: #eef0f4;
+  --charcoal: #c4cad9;
+  --slate: #b1b6c3;
+  --steel: #97a0b4;
+  --stone: #6c768f;
+  --hairline: rgba(255, 255, 255, 0.16);
+  --hairline-soft: rgba(255, 255, 255, 0.10);
+  --disabled-text: #4c5670;
 
-  --text-primary: var(--neutral-50);
-  --text-secondary: var(--neutral-300);
-  --text-muted: var(--neutral-400);
-  --text-inverse: var(--neutral-900);
-  --text-accent: var(--accent-300);
+  --surface-base: var(--surface-soft);
+  --surface-raised: var(--canvas);
+  --surface-overlay: rgba(10, 19, 23, 0.85);
+  --surface-glass: rgba(20, 25, 31, 0.55);
+  --surface-inverse: var(--canvas);
 
-  --success-bg: rgba(13, 107, 58, 0.18);
+  --border-subtle: var(--hairline-soft);
+  --border-default: var(--hairline);
+  --border-strong: rgba(255, 255, 255, 0.28);
+
+  --text-primary: var(--ink-deep);
+  --text-secondary: var(--charcoal);
+  --text-muted: var(--steel);
+  --text-inverse: var(--canvas);
+  --text-accent: #7ea9ff;
+
+  --neutral-0: #0a1317;
+  --neutral-50: #14191f;
+  --neutral-100: #1a2027;
+  --neutral-200: rgba(255, 255, 255, 0.10);
+  --neutral-300: rgba(255, 255, 255, 0.16);
+  --neutral-400: #6c768f;
+  --neutral-500: #97a0b4;
+  --neutral-600: #b1b6c3;
+  --neutral-700: #c4cad9;
+  --neutral-800: #eef0f4;
+  --neutral-900: #f7f8fa;
+  --neutral-950: #ffffff;
+
+  --success-bg: rgba(31, 122, 58, 0.20);
   --success-fg: #6ee2a3;
   --success-border: rgba(110, 226, 163, 0.30);
   --warning-bg: rgba(138, 99, 0, 0.22);
-  --warning-fg: #f1d97a;
-  --warning-border: rgba(241, 217, 122, 0.30);
+  --warning-fg: #f3dc8a;
+  --warning-border: rgba(243, 220, 138, 0.30);
   --danger-bg: rgba(179, 22, 47, 0.22);
   --danger-fg: #fda5b4;
   --danger-border: rgba(253, 165, 180, 0.30);
-  --info-bg: rgba(29, 78, 216, 0.22);
-  --info-fg: #b7c6f5;
-  --info-border: rgba(183, 198, 245, 0.30);
+  --info-bg: rgba(4, 87, 203, 0.22);
+  --info-fg: #b9cbf3;
+  --info-border: rgba(185, 203, 243, 0.30);
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.40);
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.45);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.65);
-  --shadow-glass: 0 1px 2px rgba(0, 0, 0, 0.40), 0 12px 32px rgba(6, 182, 212, 0.22);
-  --shadow-focus-ring: 0 0 0 4px rgba(103, 232, 249, 0.28);
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.40);
+  --shadow-sm: rgba(0, 0, 0, 0.45) 1px 1px 0px 0px;
+  --shadow-md: rgba(0, 0, 0, 0.55) 0px 1px 4px 0px;
+  --shadow-lg: rgba(0, 0, 0, 0.55) 0px 1px 4px 0px;
+  --shadow-glass: rgba(0, 0, 0, 0.55) 0px 1px 4px 0px;
+  --shadow-focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px #7ea9ff;
 }
 
 /* ============================================================
@@ -179,9 +261,16 @@
   --color-accent-800: var(--accent-800);
   --color-accent-900: var(--accent-900);
 
+  --color-canvas: var(--canvas);
   --color-surface: var(--surface-raised);
   --color-surface-base: var(--surface-base);
+  --color-surface-soft: var(--surface-soft);
   --color-surface-glass: var(--surface-glass);
+  --color-ink-deep: var(--ink-deep);
+  --color-ink: var(--ink);
+  --color-charcoal: var(--charcoal);
+  --color-steel: var(--steel);
+  --color-stone: var(--stone);
 
   --color-fg: var(--text-primary);
   --color-fg-muted: var(--text-secondary);
@@ -191,15 +280,17 @@
   --color-border-default: var(--border-default);
   --color-border-strong: var(--border-strong);
 
-  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Manrope', 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
-  --radius-2xl: var(--radius-2xl);
+  --radius-pill: var(--radius-pill);
+  --radius-3xl: var(--radius-3xl);
+  --radius-feature: var(--radius-feature);
 }
 
 /* ============================================================
-   Base styles
+   Base
    ============================================================ */
 * {
   box-sizing: border-box;
@@ -208,7 +299,8 @@
 html {
   min-height: 100%;
   font-family: var(--font-sans);
-  background: var(--surface-base);
+  font-feature-settings: 'ss01', 'ss02', 'cv11';
+  background: var(--canvas);
   text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
 }
@@ -220,13 +312,26 @@ body,
 
 body {
   margin: 0;
-  background: var(--surface-base);
-  color: var(--text-primary);
+  background: var(--canvas);
+  color: var(--ink-deep);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'ss02', 'cv11';
+  /* DESIGN.md body-md letter-spacing fingerprint (-0.16px on 16px text). */
+  letter-spacing: -0.16px;
   transition:
     background-color var(--duration) var(--ease-out-quart),
     color var(--duration) var(--ease-out-quart);
+}
+
+/* Display headings: Manrope, slightly tighter, ss01/ss02 always paired.
+   DESIGN.md "switch on ss01, ss02 together for any heading" — never one
+   stylistic set without the other. Headings reset letter-spacing to 0
+   (the spec gives heading sizes a flat 0 letterSpacing). */
+h1, h2, h3, h4, .meta-display {
+  font-family: var(--font-display);
+  font-feature-settings: 'ss01', 'ss02';
+  letter-spacing: 0;
 }
 
 button,
@@ -234,11 +339,12 @@ input,
 select,
 textarea {
   font: inherit;
+  font-feature-settings: inherit;
 }
 
 ::selection {
-  background: var(--brand-200);
-  color: var(--brand-950);
+  background: var(--brand-100);
+  color: var(--brand-900);
 }
 
 input[type='date'],
@@ -246,9 +352,12 @@ input[type='time'] {
   color-scheme: inherit;
 }
 
+/* ============================================================
+   Utility classes — surfaces, scrollbars, animations
+   ============================================================ */
 .app-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--border-default) transparent;
+  scrollbar-color: var(--hairline) transparent;
 }
 .app-scrollbar::-webkit-scrollbar {
   height: 8px;
@@ -256,38 +365,61 @@ input[type='time'] {
 }
 .app-scrollbar::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: var(--border-default);
+  background: var(--hairline);
 }
 
-/* Surface utility classes */
+/* Generic surface — kept for back-compat with code that still uses it. */
 .surface {
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--canvas);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-xl);
 }
 .surface-glass {
   background: var(--surface-glass);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-glass);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-xl);
 }
 .surface-raised {
-  background: var(--surface-raised);
+  background: var(--canvas);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
 }
 
+/* Photographic showcase tile — full-bleed image, no chrome, big radius. */
+.surface-photo {
+  background: var(--canvas);
+  border-radius: var(--radius-3xl);
+  overflow: hidden;
+}
+
+/* Marketing hero band — dark canvas, ink-deep fill. */
+.surface-ink {
+  background: var(--ink-deep);
+  color: var(--canvas);
+  border-radius: var(--radius-3xl);
+}
+
+/* Subtle promotional gradient used on dashboard hero. */
 .gradient-mesh {
   background:
-    radial-gradient(60% 60% at 10% 10%, rgba(6, 182, 212, 0.13), transparent 60%),
-    radial-gradient(50% 50% at 90% 0%, rgba(49, 95, 145, 0.10), transparent 60%),
+    radial-gradient(60% 60% at 12% 8%, rgba(0, 100, 224, 0.08), transparent 60%),
+    radial-gradient(45% 55% at 92% 4%, rgba(161, 33, 206, 0.06), transparent 60%),
     var(--surface-base);
 }
 
-/* Focus visible */
+/* Promo banner (above the nav) — dark or yellow strip. */
+.promo-banner-dark {
+  background: var(--ink-deep);
+  color: var(--canvas);
+}
+.promo-banner-yellow {
+  background: var(--warning);
+  color: var(--ink-deep);
+}
+
+/* Focus-visible — Meta uses a 2px fb-blue ring. */
 :focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus-ring);
@@ -327,16 +459,20 @@ textarea {
     background-color var(--duration-fast) var(--ease-out-quart);
 }
 
-/* Card hover lift */
 .surface,
 .surface-glass,
-.surface-raised {
+.surface-raised,
+.surface-photo,
+.surface-ink {
   transition:
     transform var(--duration) var(--ease-out-quart),
     box-shadow var(--duration) var(--ease-out-quart),
     border-color var(--duration) var(--ease-out-quart);
 }
 
+/* ============================================================
+   Animations
+   ============================================================ */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -347,6 +483,11 @@ textarea {
   100% { background-position: 200% 0; }
 }
 
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .animate-fade-up {
   animation: fadeInUp var(--duration-slow) var(--ease-out-quart) both;
 }
@@ -354,19 +495,94 @@ textarea {
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    var(--neutral-100) 0%,
-    var(--neutral-200) 50%,
-    var(--neutral-100) 100%
+    var(--surface-soft) 0%,
+    var(--hairline-soft) 50%,
+    var(--surface-soft) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;
 }
 
-/* Soft pulse for live indicators */
-@keyframes softPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
-}
 .animate-soft-pulse {
   animation: softPulse 1.8s ease-in-out infinite;
+}
+
+/* ============================================================
+   Meta typography helpers — apply when you want explicit sizing.
+   Pages can opt into these for hero/display headlines.
+   ============================================================ */
+.meta-hero-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.25rem, 4vw + 1rem, 4rem);   /* 36 → 64 */
+  line-height: 1.16;
+  letter-spacing: 0;
+  font-feature-settings: 'ss01', 'ss02';
+}
+.meta-display-lg {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 2.5vw + 0.75rem, 3rem); /* 32 → 48 */
+  line-height: 1.17;
+  letter-spacing: 0;
+  font-feature-settings: 'ss01', 'ss02';
+}
+.meta-heading-lg {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.75rem, 1.5vw + 0.75rem, 2.25rem); /* 28 → 36 */
+  line-height: 1.28;
+  letter-spacing: 0;
+  font-feature-settings: 'ss01', 'ss02';
+}
+.meta-heading-md {
+  font-family: var(--font-display);
+  font-weight: 300;        /* editorial — the visible signature */
+  font-size: 1.75rem;      /* 28px */
+  line-height: 1.21;
+  font-feature-settings: 'ss01', 'ss02';
+}
+.meta-heading-sm {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.5rem;       /* 24px */
+  line-height: 1.25;
+  font-feature-settings: 'ss01', 'ss02';
+}
+.meta-subtitle-lg {
+  font-weight: 700;
+  font-size: 1.125rem;     /* 18px */
+  line-height: 1.44;
+}
+.meta-body {
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: -0.16px; /* Meta body letterspacing */
+}
+.meta-body-sm {
+  font-size: 0.875rem;
+  line-height: 1.43;
+  letter-spacing: -0.14px;
+}
+.meta-caption {
+  font-size: 0.75rem;
+  line-height: 1.33;
+}
+.meta-eyebrow {
+  /* DESIGN.md `caption-bold` (12px / 700 / 1.33).
+     Uppercase tracking is added at +0.14em so 12px caps stay legible. */
+  font-size: 0.75rem;        /* 12px */
+  font-weight: 700;
+  line-height: 1.33;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+/* DESIGN.md `button-md` typography fingerprint: 14px / 700 / -0.14px. */
+.meta-button-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.43;
+  letter-spacing: -0.14px;
 }
