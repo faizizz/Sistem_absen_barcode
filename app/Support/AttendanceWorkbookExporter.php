@@ -29,6 +29,13 @@ class AttendanceWorkbookExporter
 
     public function storeTemporaryXlsx(): string
     {
+        if (! class_exists(ZipArchive::class)) {
+            throw new RuntimeException(
+                'PHP extension "zip" tidak terpasang di server. '
+                .'Aktifkan ext-zip pada konfigurasi PHP untuk menggunakan ekspor Excel.',
+            );
+        }
+
         $sheets = $this->buildSheets();
         $temporaryPath = tempnam(sys_get_temp_dir(), 'attendance-xlsx-');
 
