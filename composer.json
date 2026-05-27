@@ -4,6 +4,7 @@
     "description": "Sistem Absensi Mahasiswa berbasis QR Code",
     "require": {
         "php": "^8.4",
+        "ext-zip": "*",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10",
