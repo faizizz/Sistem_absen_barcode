@@ -86,7 +86,14 @@ export function ExportDialog({
                 credentials: 'same-origin',
                 headers: {
                     Accept:
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, */*',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+                    // Critical for production diagnostics: with this header
+                    // Laravel's `auth` guard returns 401 JSON instead of a
+                    // 302 redirect to the login page, and our controller's
+                    // catch blocks return JSON with the actual exception
+                    // message. Without it we lose the real error in the
+                    // redirect chain and only see the rendered HTML.
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
             });
         } catch (err) {
@@ -96,20 +103,40 @@ export function ExportDialog({
             return;
         }
 
-        // Auth lapsed during long sessions — server redirects to login.
-        // fetch follows the redirect so we land on a 200 HTML page; detect
-        // this via Content-Type + body content rather than status alone.
+        // Auth lapsed during long sessions — server returns 401 JSON
+        // (because we sent X-Requested-With) instead of redirecting.
         const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
         const isXlsx =
             contentType.includes('spreadsheetml') ||
             contentType.includes('officedocument');
+        const isJson = contentType.includes('application/json');
 
         if (!response.ok) {
-            const body = await response.text().catch(() => '');
-            console.error('[Export] HTTP', response.status, body.slice(0, 1000));
-            toast.error(
-                `Gagal export (HTTP ${response.status}). Detail tersedia di console browser.`,
-            );
+            // Try to parse a JSON error first; fall back to text dump.
+            let serverMessage = '';
+            if (isJson) {
+                try {
+                    const data = await response.json();
+                    serverMessage = data?.message || JSON.stringify(data);
+                } catch {
+                    /* ignore */
+                }
+            } else {
+                serverMessage = (await response.text().catch(() => '')).slice(0, 1000);
+            }
+
+            console.error('[Export] HTTP', response.status, serverMessage);
+
+            if (response.status === 401 || response.status === 419) {
+                toast.error('Sesi login Anda sudah habis. Refresh halaman lalu coba lagi.');
+            } else if (response.status === 403) {
+                toast.error('Anda tidak punya izin untuk mengekspor.');
+            } else if (serverMessage) {
+                toast.error(serverMessage);
+            } else {
+                toast.error(`Gagal export (HTTP ${response.status}). Detail di console.`);
+            }
+
             setSubmitting(false);
             return;
         }
@@ -121,15 +148,8 @@ export function ExportDialog({
                 contentType,
                 body.slice(0, 1000),
             );
-            // If the response looks like a Laravel/Inertia HTML redirect,
-            // session has likely lapsed. Be specific so users know to retry
-            // after refreshing the page.
-            const looksLikeAuth =
-                body.includes('login') || body.includes('Kuasa') || body.includes('Login');
             toast.error(
-                looksLikeAuth
-                    ? 'Sesi login Anda mungkin sudah habis. Refresh halaman lalu coba lagi.'
-                    : 'Server mengembalikan format yang tidak terduga. Cek console untuk detail.',
+                'Server tidak mengembalikan file Excel. Cek console untuk detail.',
             );
             setSubmitting(false);
             return;

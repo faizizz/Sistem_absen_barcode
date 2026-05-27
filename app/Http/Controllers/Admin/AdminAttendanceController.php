@@ -23,15 +23,20 @@ class AdminAttendanceController extends Controller
      * Generate and stream the attendance workbook.
      *
      * Wraps the workbook build in a try/catch so any infrastructure failure
-     * (missing `ext-zip`, unwritable temp dir, malformed data) surfaces as a
-     * redirect-back with a flash error rather than a bare 500 page that the
-     * user would otherwise see as "download tidak bisa".
+     * (missing `ext-zip`, unwritable temp dir, malformed data) surfaces as
+     * a structured response rather than a bare 500 page.
      *
-     * @return BinaryFileResponse|RedirectResponse
+     * For ajax/JSON callers (the new `ExportDialog` uses fetch with
+     * `X-Requested-With: XMLHttpRequest`), errors come back as JSON with
+     * the exact exception message — letting the dialog show the real
+     * cause in a toast instead of swallowing it inside an HTML redirect.
+     *
+     * @return BinaryFileResponse|RedirectResponse|\Illuminate\Http\JsonResponse
      */
     public function export(ExportAttendanceRequest $request): Response
     {
         $data = $request->validated();
+        $wantsJson = $request->ajax() || $request->wantsJson() || $request->expectsJson();
 
         try {
             $path = $this->export->generate(
@@ -41,18 +46,28 @@ class AdminAttendanceController extends Controller
             );
         } catch (\RuntimeException $e) {
             report($e);
+            $message = 'Gagal membuat file ekspor: '.$e->getMessage();
 
-            return back()->with(
-                'error',
-                'Gagal membuat file ekspor: '.$e->getMessage(),
-            );
+            if ($wantsJson) {
+                return response()->json([
+                    'message' => $message,
+                    'exception' => class_basename($e),
+                ], 422);
+            }
+
+            return back()->with('error', $message);
         } catch (Throwable $e) {
             report($e);
+            $message = 'Terjadi kesalahan saat membuat ekspor: '.$e->getMessage();
 
-            return back()->with(
-                'error',
-                'Terjadi kesalahan saat membuat ekspor. Silakan coba lagi atau hubungi admin.',
-            );
+            if ($wantsJson) {
+                return response()->json([
+                    'message' => $message,
+                    'exception' => class_basename($e),
+                ], 500);
+            }
+
+            return back()->with('error', 'Terjadi kesalahan saat membuat ekspor. Silakan coba lagi atau hubungi admin.');
         }
 
         $suffix = now()->format('Y-m-d');
