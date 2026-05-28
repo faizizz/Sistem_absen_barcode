@@ -9,17 +9,27 @@ import { cn } from '@/lib/cn';
  * mobile bottom sheet variant. Surface is canvas; backdrop is the
  * `rgba(10,19,23,0.55)` ink translucent overlay called out in DESIGN.md.
  */
-export function Dialog({ open, onClose, title, description, children, footer, size = 'md' }) {
+export function Dialog({
+    open,
+    onClose,
+    title,
+    description,
+    children,
+    footer,
+    size = 'md',
+    closable = true,
+}) {
     const sizeMap = {
         sm: 'max-w-md',
         md: 'max-w-lg',
         lg: 'max-w-2xl',
         xl: 'max-w-4xl',
     };
+    const handleClose = closable ? onClose : () => {};
 
     return (
         <Transition show={open} as={Fragment}>
-            <HUIDialog onClose={onClose} className="relative z-50">
+            <HUIDialog onClose={handleClose} className="relative z-50">
                 <TransitionChild
                     as={Fragment}
                     enter="ease-out duration-200"
@@ -63,14 +73,16 @@ export function Dialog({ open, onClose, title, description, children, footer, si
                                         <p className="mt-1.5 text-base [letter-spacing:-0.16px] leading-[1.5] text-[color:var(--charcoal)]">{description}</p>
                                     )}
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--canvas)] text-[color:var(--ink)] hover:bg-[color:var(--surface-soft)]"
-                                    aria-label="Tutup"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
+                                {closable && (
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--canvas)] text-[color:var(--ink)] hover:bg-[color:var(--surface-soft)]"
+                                        aria-label="Tutup"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
                             </header>
                             <div className="px-6 py-5 max-h-[70vh] overflow-y-auto app-scrollbar">{children}</div>
                             {footer && (

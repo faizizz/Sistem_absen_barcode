@@ -8,6 +8,7 @@ import { Input } from '@/components/primitives/Input';
 import { Field } from '@/components/primitives/Field';
 import { Sheet } from '@/components/primitives/Sheet';
 import { Dialog } from '@/components/primitives/Dialog';
+import { Spinner } from '@/components/primitives/Loading';
 import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -81,6 +82,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
     // admin menekan Konfirmasi/Batal di modal. Selain itu null.
     const [pendingScan, setPendingScan] = useState(null);
     const [confirming, setConfirming] = useState(false);
+    const [scanLoading, setScanLoading] = useState(null);
 
     // Recent scans feed: hydrate from props, then optimistically prepend on
     // each successful scan so the operator sees the row instantly without
@@ -95,6 +97,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
     }, [propsRecent]);
 
     const html5Ref = useRef(null);
+    const scannerPausedRef = useRef(false);
     const submittingRef = useRef(false);
     const lastScanRef = useRef({ code: null, time: 0 });
     const eventIdRef = useRef(eventId);
@@ -108,6 +111,10 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
     useEffect(() => {
         pendingScanRef.current = pendingScan;
     }, [pendingScan]);
+    const scanLoadingRef = useRef(scanLoading);
+    useEffect(() => {
+        scanLoadingRef.current = scanLoading;
+    }, [scanLoading]);
 
     useEffect(() => {
         eventIdRef.current = eventId;
@@ -221,6 +228,37 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
         return { label: 'Nonaktif', tone: 'neutral' };
     }, [selectedEvent]);
 
+    function setScanLoadingState(next) {
+        scanLoadingRef.current = next;
+        setScanLoading(next);
+    }
+
+    function pauseScannerForProcessing() {
+        if (scannerPausedRef.current) return;
+        const inst = html5Ref.current;
+        if (!inst?.isScanning) return;
+
+        try {
+            inst.pause(true);
+            scannerPausedRef.current = true;
+        } catch {
+            // Ignore races where the scanner has already stopped or paused.
+        }
+    }
+
+    function resumeScannerAfterProcessing() {
+        const inst = html5Ref.current;
+        if (!inst || !scannerPausedRef.current) return;
+
+        try {
+            inst.resume();
+        } catch {
+            // Ignore races where the scanner has already stopped.
+        } finally {
+            scannerPausedRef.current = false;
+        }
+    }
+
     // Init camera
     useEffect(() => {
         let cancelled = false;
@@ -259,6 +297,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
         return () => {
             cancelled = true;
             const inst2 = html5Ref.current;
+            scannerPausedRef.current = false;
             if (inst2?.isScanning) inst2.stop().catch(() => {});
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -322,13 +361,19 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
             return;
         }
         // Jangan terima scan baru kalau modal konfirmasi masih terbuka
-        // atau kita sedang submit ke server.
-        if (submittingRef.current || pendingScanRef.current) return;
+        // atau kita sedang submit ke server / menampilkan modal loading.
+        if (submittingRef.current || pendingScanRef.current || scanLoadingRef.current) return;
 
         const now = Date.now();
         if (lastScanRef.current.code === code && now - lastScanRef.current.time < 2500) return;
         lastScanRef.current = { code, time: now };
         submittingRef.current = true;
+        pauseScannerForProcessing();
+        setScanLoadingState({
+            code,
+            mode,
+            phase: confirmModeRef.current === CONFIRM_MODE_CONFIRM ? 'preview' : 'save',
+        });
 
         const payload = {
             mode,
@@ -336,18 +381,31 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
             ...(mode === 'nim' ? { nim: code } : { qr_code: code }),
         };
 
-        try {
-            if (confirmModeRef.current === CONFIRM_MODE_CONFIRM) {
-                // Mode konfirmasi: panggil endpoint preview, buka modal,
-                // tunggu admin menekan Konfirmasi / Batal.
+        if (confirmModeRef.current === CONFIRM_MODE_CONFIRM) {
+            try {
+                // Mode konfirmasi: preview dulu, lalu tampilkan dialog
+                // konfirmasi setelah admin melihat ringkasan yang akan dicatat.
                 const { data } = await api.post('/kuasa/attendances/scan/preview', payload);
                 beepSuccess();
+                setScanLoadingState(null);
                 setPendingScan({ code, mode, preview: data });
-                // submittingRef tetap true selama modal terbuka — di-unset
-                // saat modal close (confirmPendingScan / cancelPendingScan).
-                return;
+            } catch (err) {
+                if (!err?.sessionExpired) {
+                    const msg = err?.response?.data?.message ?? 'Gagal memproses scan.';
+                    setFlashType('error');
+                    beepError();
+                    setLastResult({ ok: false, message: msg });
+                    setTimeout(() => setFlashType(null), 400);
+                    setTimeout(() => setLastResult(null), 4000);
+                }
+                setScanLoadingState(null);
+                resumeScannerAfterProcessing();
+                submittingRef.current = false;
             }
+            return;
+        }
 
+        try {
             // Mode auto (default): langsung simpan.
             const { data } = await api.post('/kuasa/attendances/scan', payload);
             setFlashType('success');
@@ -359,23 +417,23 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                     return next.slice(0, 12);
                 });
             }
-            submittingRef.current = false;
             setTimeout(() => setFlashType(null), 400);
             setTimeout(() => setLastResult(null), 4000);
         } catch (err) {
             // The session-expired interceptor already showed a toast and is
             // redirecting; don't double-flash the user with a second message.
-            if (err?.sessionExpired) {
-                submittingRef.current = false;
-                return;
+            if (!err?.sessionExpired) {
+                const msg = err?.response?.data?.message ?? 'Gagal mencatat absen.';
+                setFlashType('error');
+                beepError();
+                setLastResult({ ok: false, message: msg });
+                setTimeout(() => setFlashType(null), 400);
+                setTimeout(() => setLastResult(null), 4000);
             }
-            const msg = err?.response?.data?.message ?? 'Gagal mencatat absen.';
-            setFlashType('error');
-            beepError();
-            setLastResult({ ok: false, message: msg });
+        } finally {
+            setScanLoadingState(null);
+            resumeScannerAfterProcessing();
             submittingRef.current = false;
-            setTimeout(() => setFlashType(null), 400);
-            setTimeout(() => setLastResult(null), 4000);
         }
     }
 
@@ -417,6 +475,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
         } finally {
             setConfirming(false);
             submittingRef.current = false;
+            resumeScannerAfterProcessing();
             setTimeout(() => setFlashType(null), 400);
             setTimeout(() => setLastResult(null), 4000);
         }
@@ -428,8 +487,10 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
      */
     function cancelPendingScan() {
         setPendingScan(null);
+        setScanLoadingState(null);
         submittingRef.current = false;
         lastScanRef.current = { code: null, time: 0 };
+        resumeScannerAfterProcessing();
     }
 
     function submitManual(e) {
@@ -449,6 +510,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
     }
 
     const noActiveEvents = (activeEvents ?? []).length === 0;
+    const scanBusy = Boolean(scanLoading || pendingScan || confirming);
 
     return (
         <>
@@ -475,9 +537,10 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                                 role="tab"
                                 aria-selected={confirmMode === CONFIRM_MODE_AUTO}
                                 onClick={() => setConfirmMode(CONFIRM_MODE_AUTO)}
+                                disabled={scanBusy}
                                 title="Scan langsung tercatat tanpa konfirmasi"
                                 className={cn(
-                                    'flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition',
+                                    'flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50',
                                     confirmMode === CONFIRM_MODE_AUTO
                                         ? 'bg-white text-black shadow-sm'
                                         : 'text-white/85 hover:text-white',
@@ -491,9 +554,10 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                                 role="tab"
                                 aria-selected={confirmMode === CONFIRM_MODE_CONFIRM}
                                 onClick={() => setConfirmMode(CONFIRM_MODE_CONFIRM)}
+                                disabled={scanBusy}
                                 title="Scan munculkan modal preview dulu sebelum disimpan"
                                 className={cn(
-                                    'flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition',
+                                    'flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50',
                                     confirmMode === CONFIRM_MODE_CONFIRM
                                         ? 'bg-amber-400 text-black shadow-sm'
                                         : 'text-white/85 hover:text-white',
@@ -508,7 +572,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                         </Badge>
                         <button
                             onClick={flipCamera}
-                            disabled={cameras.length < 2 || switching}
+                            disabled={cameras.length < 2 || switching || scanBusy}
                             className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md hover:bg-black/70 disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label="Balik kamera"
                             title={cameras.length < 2 ? 'Hanya satu kamera tersedia' : 'Balik kamera'}
@@ -532,9 +596,10 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                                 <button
                                     type="button"
                                     onClick={() => setEventPanelOpen((v) => !v)}
+                                    disabled={scanBusy}
                                     aria-expanded={eventPanelOpen}
                                     aria-label="Buka panel event aktif"
-                                    className="flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 text-left backdrop-blur-md"
+                                    className="flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-black/55 px-3 py-2 text-left backdrop-blur-md disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <div className="min-w-0 flex-1">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/65">
@@ -571,6 +636,7 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                                                 value={eventId}
                                                 onChange={handleEventChange}
                                                 options={eventOptions}
+                                                disabled={scanBusy}
                                                 className="[&_button]:!bg-white/10 [&_button]:!text-white [&_button]:!border-white/20 [&_svg]:!text-white/70"
                                             />
                                         </motion.div>
@@ -684,7 +750,8 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                     </p>
                     <button
                         onClick={() => setManualOpen(true)}
-                        className="flex h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[color:var(--ink-button)] px-[30px] text-sm font-bold text-[color:var(--canvas)] shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--charcoal)] active:scale-[0.98]"
+                        disabled={scanBusy}
+                        className="flex h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-[color:var(--ink-button)] px-[30px] text-sm font-bold text-[color:var(--canvas)] shadow-[0_12px_28px_rgba(0,0,0,0.24)] backdrop-blur-md hover:bg-[color:var(--charcoal)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Keyboard className="h-4 w-4" />
                         Input Manual
@@ -812,6 +879,10 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                 onConfirm={confirmPendingScan}
                 onCancel={cancelPendingScan}
             />
+            <ScanLoadingDialog
+                open={Boolean(scanLoading)}
+                loading={scanLoading}
+            />
         </>
     );
 }
@@ -920,7 +991,49 @@ function formatScanTime(value) {
     return tail.split(':').slice(0, 2).join(':');
 }
 
+/**
+ * ScanLoadingDialog — modal loading full-screen saat scan baru sedang
+ * diproses. Scanner dipause selama dialog ini terbuka agar tidak ada
+ * hasil scan baru yang ikut masuk ke antrian.
+ */
+function ScanLoadingDialog({ open, loading }) {
+    const modeLabel = loading?.mode === 'nim' ? 'NIM' : 'QR';
+    const title = loading?.phase === 'preview' ? 'Memverifikasi scan' : 'Memproses scan';
+    const description =
+        loading?.phase === 'preview'
+            ? 'Kamera dijeda sementara saat sistem memeriksa data yang terbaca.'
+            : 'Kamera dijeda sementara saat absensi disimpan.';
 
+    return (
+        <Dialog
+            open={open}
+            onClose={() => {}}
+            closable={false}
+            title={title}
+            description={description}
+            size="sm"
+        >
+            <div className="flex flex-col items-center gap-4 py-3 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--surface-soft)]">
+                    <Spinner size={24} />
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[color:var(--ink-deep)]">
+                        {modeLabel} terdeteksi
+                    </p>
+                    <p className="text-sm leading-6 text-[color:var(--charcoal)]">
+                        Jangan scan QR lain sampai proses ini selesai.
+                    </p>
+                </div>
+                {loading?.code && (
+                    <div className="max-w-full rounded-[var(--radius-lg)] border border-[color:var(--hairline-soft)] bg-[color:var(--canvas)] px-3 py-2 font-mono text-[11px] leading-5 break-all text-[color:var(--steel)]">
+                        {loading.code}
+                    </div>
+                )}
+            </div>
+        </Dialog>
+    );
+}
 
 const STATUS_TONE = {
     hadir: 'success',
