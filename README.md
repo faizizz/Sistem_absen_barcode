@@ -191,16 +191,65 @@ Departemen/Biro,Jabatan,Nama,NIM
 Contoh isi data:
 
 ```bash
-HRD,Anggota,Budi Santoso,123456789
+Human Resources Development,Anggota,Budi Santoso,123456789
 ```
 
-Jika nilai `Departemen/Biro` tidak sesuai dengan daftar departemen yang tersedia di sistem, data tersebut akan dilewati saat proses seeding.
+Jika nilai `Departemen/Biro` tidak sesuai dengan daftar nama lengkap
+departemen yang tersedia di sistem (lihat section *Departemen yang
+Didukung* di bawah), data tersebut akan dilewati saat proses seeding.
 
 Untuk menjalankan ulang seeder data anggota:
 
 ```bash
 php artisan db:seed --class=KepengurusanSeeder
 ```
+
+---
+
+## Departemen yang Didukung
+
+Aplikasi ini dirancang untuk **8 departemen/biro tetap** yang
+hardcode di model `App\Models\Profile`. Daftar ini dipakai sebagai
+sumber kebenaran untuk:
+
+- validasi kolom `Departemen/Biro` di file CSV anggota,
+- pilihan dropdown departemen pada form anggota & event di konsol admin,
+- filter event berdasarkan departemen (event yang ditandai untuk
+  departemen tertentu hanya bisa dipindai oleh anggota departemen itu).
+
+Setiap departemen punya **nama lengkap** (yang disimpan di DB) dan
+**kode singkat** (untuk badge / cell sempit di UI).
+
+| Kode    | Nama Lengkap                                          |
+| ------- | ----------------------------------------------------- |
+| BPI     | Badan Pengurus Inti                                   |
+| HRD     | Human Resources Development                           |
+| RELACS  | Relation and Community Services                       |
+| PSD     | Professional Skill Development                        |
+| ADWEL   | Advocacy and Welfare                                  |
+| COMINFO | Communication and Media Information                   |
+| EDEN    | Entrepreneurship Development                          |
+| MPKO    | Majelis Pengawasan dan Konsultasi Organisasi (MPKO)   |
+
+Catatan implementasi:
+
+- Konstanta nama panjang (`DEPARTEMEN_*`) dan kode singkat
+  (`DEPARTMENT_SHORT_CODES`) berada di `app/Models/Profile.php`. Kolom
+  `departemen` di tabel `profiles`, `events`, dan `attendances`
+  menyimpan **nama lengkap** sebagai canonical value.
+- Kode singkat di tabel di atas hanya dipakai untuk **tampilan UI**
+  (badge anggota, kolom event di mobile, dll.) lewat helper
+  `Profile::shortCodeFor()`. Kode singkat **bukan input yang valid** —
+  CSV anggota dan dropdown form harus memakai nama lengkap.
+- Saat seeding dari CSV, baris dengan nilai `Departemen/Biro` yang
+  tidak persis cocok dengan salah satu nama lengkap di tabel
+  akan **dilewati** oleh `KepengurusanSeeder` dengan warning di
+  console. Pastikan ejaan dan kapitalisasi sama persis (mis.
+  `Human Resources Development`, bukan `HRD` atau
+  `human resources development`).
+- Jika organisasi Anda butuh departemen tambahan / berbeda, edit
+  konstanta di `Profile` (`DEPARTEMEN_*`, `DEPARTMENTS`,
+  `DEPARTMENT_SHORT_CODES`) dan jalankan ulang seeder.
 
 ---
 
