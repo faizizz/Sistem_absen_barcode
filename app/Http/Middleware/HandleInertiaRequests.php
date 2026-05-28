@@ -29,6 +29,7 @@ class HandleInertiaRequests extends Middleware
                     'login_code' => $request->user()->login_code,
                     'role' => $request->user()->role,
                     'is_admin' => $request->user()->isAdmin(),
+                    'must_change_password' => (bool) $request->user()->must_change_password,
                 ] : null,
             ],
         ];

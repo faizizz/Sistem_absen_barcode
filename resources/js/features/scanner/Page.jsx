@@ -7,6 +7,7 @@ import { Badge } from '@/components/primitives/Badge';
 import { Input } from '@/components/primitives/Input';
 import { Field } from '@/components/primitives/Field';
 import { Sheet } from '@/components/primitives/Sheet';
+import { Dialog } from '@/components/primitives/Dialog';
 import { Ellipsis } from '@/components/primitives/Ellipsis';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -22,10 +23,39 @@ import {
     SwitchCamera,
     Keyboard,
     Clock,
+    ShieldCheck,
+    Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const SCANNER_DOM_ID = 'qr-scanner-region';
+
+const CONFIRM_MODE_STORAGE_KEY = 'scanner.confirmMode';
+const CONFIRM_MODE_AUTO = 'auto';
+const CONFIRM_MODE_CONFIRM = 'confirm';
+
+/**
+ * Baca mode konfirmasi dari localStorage. Kembalikan default 'auto'
+ * jika belum pernah di-set atau localStorage tidak tersedia (SSR / privacy).
+ */
+function readConfirmMode() {
+    if (typeof window === 'undefined') return CONFIRM_MODE_AUTO;
+    try {
+        const v = window.localStorage.getItem(CONFIRM_MODE_STORAGE_KEY);
+        return v === CONFIRM_MODE_CONFIRM ? CONFIRM_MODE_CONFIRM : CONFIRM_MODE_AUTO;
+    } catch {
+        return CONFIRM_MODE_AUTO;
+    }
+}
+
+function writeConfirmMode(mode) {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(CONFIRM_MODE_STORAGE_KEY, mode);
+    } catch {
+        /* ignore */
+    }
+}
 
 export default function ScannerPage({ activeEvents, recentAttendances }) {
     const firstOpen = (activeEvents ?? []).find((e) => e.is_open_for_scan);
@@ -41,6 +71,16 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
     const [activeCameraId, setActiveCameraId] = useState(null);
     const [switching, setSwitching] = useState(false);
     const [eventPanelOpen, setEventPanelOpen] = useState(false);
+
+    // Mode konfirmasi: 'auto' = langsung simpan saat scan sukses (default,
+    // perilaku lama). 'confirm' = tampilkan modal preview dulu, admin
+    // harus klik Konfirmasi untuk men-create record. Disimpan di
+    // localStorage agar persist antar reload.
+    const [confirmMode, setConfirmMode] = useState(() => readConfirmMode());
+    // pendingScan menyimpan { code, mode, preview } selama menunggu
+    // admin menekan Konfirmasi/Batal di modal. Selain itu null.
+    const [pendingScan, setPendingScan] = useState(null);
+    const [confirming, setConfirming] = useState(false);
 
     // Recent scans feed: hydrate from props, then optimistically prepend on
     // each successful scan so the operator sees the row instantly without
@@ -59,6 +99,15 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
     const lastScanRef = useRef({ code: null, time: 0 });
     const eventIdRef = useRef(eventId);
     const eventPanelRef = useRef(null);
+    const confirmModeRef = useRef(confirmMode);
+    useEffect(() => {
+        confirmModeRef.current = confirmMode;
+        writeConfirmMode(confirmMode);
+    }, [confirmMode]);
+    const pendingScanRef = useRef(pendingScan);
+    useEffect(() => {
+        pendingScanRef.current = pendingScan;
+    }, [pendingScan]);
 
     useEffect(() => {
         eventIdRef.current = eventId;
@@ -272,18 +321,77 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
             toast.error('Pilih event terlebih dahulu.');
             return;
         }
-        if (submittingRef.current) return;
+        // Jangan terima scan baru kalau modal konfirmasi masih terbuka
+        // atau kita sedang submit ke server.
+        if (submittingRef.current || pendingScanRef.current) return;
 
         const now = Date.now();
         if (lastScanRef.current.code === code && now - lastScanRef.current.time < 2500) return;
         lastScanRef.current = { code, time: now };
         submittingRef.current = true;
 
+        const payload = {
+            mode,
+            event_id: currentEvent,
+            ...(mode === 'nim' ? { nim: code } : { qr_code: code }),
+        };
+
+        try {
+            if (confirmModeRef.current === CONFIRM_MODE_CONFIRM) {
+                // Mode konfirmasi: panggil endpoint preview, buka modal,
+                // tunggu admin menekan Konfirmasi / Batal.
+                const { data } = await api.post('/kuasa/attendances/scan/preview', payload);
+                beepSuccess();
+                setPendingScan({ code, mode, preview: data });
+                // submittingRef tetap true selama modal terbuka — di-unset
+                // saat modal close (confirmPendingScan / cancelPendingScan).
+                return;
+            }
+
+            // Mode auto (default): langsung simpan.
+            const { data } = await api.post('/kuasa/attendances/scan', payload);
+            setFlashType('success');
+            beepSuccess();
+            setLastResult({ ok: true, ...data });
+            if (data?.attendance) {
+                setRecent((prev) => {
+                    const next = [data.attendance, ...prev.filter((r) => r.id !== data.attendance.id)];
+                    return next.slice(0, 12);
+                });
+            }
+            submittingRef.current = false;
+            setTimeout(() => setFlashType(null), 400);
+            setTimeout(() => setLastResult(null), 4000);
+        } catch (err) {
+            // The session-expired interceptor already showed a toast and is
+            // redirecting; don't double-flash the user with a second message.
+            if (err?.sessionExpired) {
+                submittingRef.current = false;
+                return;
+            }
+            const msg = err?.response?.data?.message ?? 'Gagal mencatat absen.';
+            setFlashType('error');
+            beepError();
+            setLastResult({ ok: false, message: msg });
+            submittingRef.current = false;
+            setTimeout(() => setFlashType(null), 400);
+            setTimeout(() => setLastResult(null), 4000);
+        }
+    }
+
+    /**
+     * Setelah admin menekan tombol Konfirmasi di modal preview, eksekusi
+     * scan beneran via endpoint /scan dan tutup modal.
+     */
+    async function confirmPendingScan() {
+        const pending = pendingScanRef.current;
+        if (!pending || confirming) return;
+        setConfirming(true);
         try {
             const payload = {
-                mode,
-                event_id: currentEvent,
-                ...(mode === 'nim' ? { nim: code } : { qr_code: code }),
+                mode: pending.mode,
+                event_id: eventIdRef.current,
+                ...(pending.mode === 'nim' ? { nim: pending.code } : { qr_code: pending.code }),
             };
             const { data } = await api.post('/kuasa/attendances/scan', payload);
             setFlashType('success');
@@ -295,21 +403,33 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                     return next.slice(0, 12);
                 });
             }
+            setPendingScan(null);
         } catch (err) {
-            // The session-expired interceptor already showed a toast and is
-            // redirecting; don't double-flash the user with a second message.
             if (err?.sessionExpired) {
+                setPendingScan(null);
                 return;
             }
             const msg = err?.response?.data?.message ?? 'Gagal mencatat absen.';
             setFlashType('error');
             beepError();
             setLastResult({ ok: false, message: msg });
+            setPendingScan(null);
         } finally {
+            setConfirming(false);
             submittingRef.current = false;
             setTimeout(() => setFlashType(null), 400);
             setTimeout(() => setLastResult(null), 4000);
         }
+    }
+
+    /**
+     * Admin batal: buang preview, reset throttle agar scan kode yang
+     * sama bisa diulang segera tanpa harus tunggu 2500ms cooldown.
+     */
+    function cancelPendingScan() {
+        setPendingScan(null);
+        submittingRef.current = false;
+        lastScanRef.current = { code: null, time: 0 };
     }
 
     function submitManual(e) {
@@ -342,6 +462,47 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                 {/* ── Header ─────────────────────────────────────── */}
                 <header className="relative z-30 shrink-0 space-y-2 px-4 pb-2 pt-[env(safe-area-inset-top,8px)] sm:px-6">
                     <div className="flex items-center justify-end gap-2">
+                        {/* Segmented control: pilihan mode konfirmasi.
+                            Dua chip selalu terlihat sehingga admin tahu
+                            opsi yang tersedia dan yang sedang aktif. */}
+                        <div
+                            role="tablist"
+                            aria-label="Mode konfirmasi scan"
+                            className="flex items-center gap-0.5 rounded-full bg-black/55 p-0.5 backdrop-blur-md"
+                        >
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={confirmMode === CONFIRM_MODE_AUTO}
+                                onClick={() => setConfirmMode(CONFIRM_MODE_AUTO)}
+                                title="Scan langsung tercatat tanpa konfirmasi"
+                                className={cn(
+                                    'flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition',
+                                    confirmMode === CONFIRM_MODE_AUTO
+                                        ? 'bg-white text-black shadow-sm'
+                                        : 'text-white/85 hover:text-white',
+                                )}
+                            >
+                                <Zap className="h-3.5 w-3.5" />
+                                <span>Auto</span>
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={confirmMode === CONFIRM_MODE_CONFIRM}
+                                onClick={() => setConfirmMode(CONFIRM_MODE_CONFIRM)}
+                                title="Scan munculkan modal preview dulu sebelum disimpan"
+                                className={cn(
+                                    'flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition',
+                                    confirmMode === CONFIRM_MODE_CONFIRM
+                                        ? 'bg-amber-400 text-black shadow-sm'
+                                        : 'text-white/85 hover:text-white',
+                                )}
+                            >
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                <span>Konfirmasi</span>
+                            </button>
+                        </div>
                         <Badge tone={cameraReady ? 'success' : 'neutral'} dot={cameraReady} size="sm" className="bg-black/55 backdrop-blur-md">
                             {cameraReady ? 'Kamera Aktif' : 'Menunggu kamera'}
                         </Badge>
@@ -644,6 +805,13 @@ export default function ScannerPage({ activeEvents, recentAttendances }) {
                     </div>
                 </form>
             </Sheet>
+
+            <ConfirmScanDialog
+                pending={pendingScan}
+                confirming={confirming}
+                onConfirm={confirmPendingScan}
+                onCancel={cancelPendingScan}
+            />
         </>
     );
 }
@@ -750,4 +918,100 @@ function formatScanTime(value) {
     const tail = idx >= 0 ? value.slice(idx + 2) : value;
     // Drop seconds: 14:32:05 → 14:32
     return tail.split(':').slice(0, 2).join(':');
+}
+
+
+
+const STATUS_TONE = {
+    hadir: 'success',
+    terlambat: 'warning',
+    izin: 'info',
+    sakit: 'info',
+    alpha: 'danger',
+};
+
+/**
+ * ConfirmScanDialog — muncul saat mode 'confirm' setelah preview sukses.
+ * Menampilkan info anggota + status yang akan dicatat. Admin klik
+ * "Konfirmasi" untuk men-trigger scan beneran, atau "Batal" untuk
+ * membuang scan dan kembali ke kamera.
+ */
+function ConfirmScanDialog({ pending, confirming, onConfirm, onCancel }) {
+    const open = Boolean(pending);
+    const preview = pending?.preview;
+
+    const tone = preview ? STATUS_TONE[preview.would_be_status] ?? 'neutral' : 'neutral';
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onCancel}
+            title="Konfirmasi Absensi"
+            description="Periksa data anggota di bawah, lalu konfirmasi untuk mencatat absensi."
+            size="md"
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onCancel} disabled={confirming}>
+                        Batal
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={onConfirm}
+                        loading={confirming}
+                        leftIcon={<CheckCircle2 className="h-4 w-4" />}
+                    >
+                        Konfirmasi & Simpan
+                    </Button>
+                </>
+            }
+        >
+            {preview && (
+                <div className="space-y-4">
+                    <div className="rounded-[var(--radius-xl)] border border-[color:var(--hairline-soft)] bg-[color:var(--surface-soft)] p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--steel)]">
+                            Anggota
+                        </p>
+                        <p className="mt-1 text-base font-bold text-[color:var(--ink-deep)]">
+                            {preview.member?.nama ?? '—'}
+                        </p>
+                        <p className="text-sm text-[color:var(--charcoal)]">
+                            NIM {preview.member?.nim ?? '—'}
+                            {preview.member?.departemen ? ` · ${preview.member.departemen}` : ''}
+                            {preview.member?.jabatan ? ` · ${preview.member.jabatan}` : ''}
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-[var(--radius-xl)] border border-[color:var(--hairline-soft)] p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--steel)]">
+                                Event
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-[color:var(--ink-deep)]">
+                                {preview.event?.nama_kegiatan ?? '—'}
+                            </p>
+                            <p className="text-xs text-[color:var(--charcoal)]">
+                                {preview.event?.waktu_mulai && preview.event?.waktu_selesai
+                                    ? `${preview.event.waktu_mulai}–${preview.event.waktu_selesai}`
+                                    : '—'}
+                                {preview.event?.batas_absensi ? ` · batas ${preview.event.batas_absensi}` : ''}
+                            </p>
+                        </div>
+                        <div className="rounded-[var(--radius-xl)] border border-[color:var(--hairline-soft)] p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--steel)]">
+                                Status & Waktu
+                            </p>
+                            <div className="mt-1 flex items-center gap-2">
+                                <Badge tone={tone} size="sm">
+                                    {preview.would_be_status_label ?? preview.would_be_status}
+                                </Badge>
+                                <span className="text-xs text-[color:var(--charcoal)]">
+                                    {preview.scan_time_label ?? ''}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </Dialog>
+    );
 }

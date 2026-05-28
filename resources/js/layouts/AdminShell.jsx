@@ -19,6 +19,7 @@ import {
     Moon,
     Sun,
     QrCode,
+    ShieldCheck,
 } from 'lucide-react';
 
 const NAV = [
@@ -26,6 +27,7 @@ const NAV = [
     { key: 'admin.events',     label: 'Event',     icon: CalendarDays,    href: '/kuasa/events' },
     { key: 'admin.scanner',    label: 'Scanner',   icon: ScanLine,        href: '/kuasa/scanner' },
     { key: 'admin.members',    label: 'Anggota',   icon: Users,           href: '/kuasa/members' },
+    { key: 'admin.admins',     label: 'Admin',     icon: ShieldCheck,     href: '/kuasa/admins' },
     { key: 'admin.audit-logs', label: 'Audit',     icon: History,         href: '/kuasa/audit-logs' },
 ];
 

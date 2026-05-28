@@ -26,7 +26,7 @@ export function PublicShell({ children, className }) {
     }
 
     return (
-        <div className="relative min-h-screen bg-[color:var(--canvas)] text-[color:var(--ink-deep)]">
+        <div className="relative flex min-h-screen flex-col bg-[color:var(--canvas)] text-[color:var(--ink-deep)]">
             {/* Promo banner above the nav — DESIGN.md `promo-banner` */}
             <div className="promo-banner-dark">
                 <div className="mx-auto flex max-w-[var(--container-marketing)] items-center justify-center gap-2 px-6 py-3 text-center text-sm font-bold leading-[1.43] [letter-spacing:-0.14px]">
@@ -57,7 +57,7 @@ export function PublicShell({ children, className }) {
             </header>
 
             {/* Main */}
-            <main className={cn('mx-auto max-w-[var(--container-marketing)] px-5 pb-20 pt-12 sm:px-10 sm:pt-20', className)}>
+            <main className={cn('mx-auto w-full max-w-[var(--container-marketing)] flex-1 px-5 pb-20 pt-12 sm:px-10 sm:pt-20', className)}>
                 {children}
             </main>
 

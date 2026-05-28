@@ -84,4 +84,38 @@ class AdminScannerController extends Controller
             'todayOverview' => $this->attendance->todayOverview(),
         ], 201);
     }
+
+    /**
+     * Preview scan — validasi penuh tanpa create record. Dipakai saat
+     * admin mengaktifkan mode "konfirmasi dulu" di scanner UI: admin
+     * scan QR -> backend balas data anggota + status yang AKAN dicatat,
+     * frontend buka modal untuk konfirmasi, baru kemudian POST scan
+     * (endpoint store() di atas) untuk benar-benar mencatat.
+     *
+     * Pesan error & HTTP code mengikuti store() persis agar UX konsisten
+     * antara mode auto vs konfirmasi.
+     */
+    public function preview(StoreAttendanceScanRequest $request): JsonResponse
+    {
+        $this->lifecycle->syncIfStale();
+
+        try {
+            $mode = $request->validated('mode');
+            $code = $mode === 'nim'
+                ? (string) $request->validated('nim')
+                : (string) $request->validated('qr_code');
+
+            $preview = $this->attendance->previewScan(
+                $code,
+                (int) $request->validated('event_id'),
+                $mode,
+            );
+        } catch (DomainException $e) {
+            $status = $e->getCode() >= 400 ? $e->getCode() : 422;
+
+            return response()->json(['message' => $e->getMessage()], $status);
+        }
+
+        return response()->json($preview, 200);
+    }
 }

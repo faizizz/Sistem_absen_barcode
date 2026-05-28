@@ -206,12 +206,113 @@ php artisan db:seed --class=KepengurusanSeeder
 
 ## Akun Demo
 
-Akun demo tersedia setelah proses `php artisan migrate --seed` berhasil dijalankan.
+Akun demo tersedia setelah proses `php artisan migrate --seed` berhasil
+dijalankan. Untuk produksi, **ganti kredensial demo di bawah** sebelum
+menerima traffic publik (lihat section *Security Setup (Production)*).
 
 | Role    | Login               | Password   | Akses             |
 | ------- | ------------------- | ---------- | ----------------- |
 | Admin   | `login_code: admin` | `password` | `/kuasa`          |
 | Anggota | NIM dari data CSV   | —          | Halaman utama `/` |
+
+---
+
+## Admin Security
+
+Konsol admin di `/kuasa/dashboard` menerapkan beberapa lapisan proteksi:
+
+### Lockout & Brute-Force Protection
+
+- **Per-akun**: 3 percobaan gagal berturut → akun terkunci sementara
+  selama 30 menit. Setelah 3 siklus lockout berturut tanpa login sukses,
+  akun ditandai **terkunci permanen** dan hanya bisa dibuka oleh admin
+  lain melalui halaman manajemen admin.
+- **Per-IP**: route `POST /kuasa` dibatasi `throttle:10,5` (10 percobaan
+  per 5 menit per IP) agar attacker tidak bisa enumerate banyak
+  `login_code` dari satu titik.
+- Pesan kegagalan kredensial selalu generik (`"Kode admin atau password
+  salah."`) untuk mencegah user enumeration. Pesan lockout sengaja
+  spesifik agar admin tahu harus minta unlock.
+
+### Password Policy (`StrongPassword`)
+
+- Minimal **12 karakter**
+- Mengandung huruf besar, huruf kecil, angka, dan simbol
+- Tidak boleh sama dengan `login_code`
+- Tidak boleh sama dengan **3 password sebelumnya** (anti-reuse)
+
+### Manajemen Akun Admin
+
+Halaman `/kuasa/admins` menyediakan UI untuk:
+
+- Menambah admin baru (StrongPassword diberlakukan saat input password)
+- Membuka kunci akun admin lain yang terkunci
+- Menghapus admin (diblok jika menyisakan <2 admin atau diri sendiri)
+
+### Audit Log
+
+Semua aktivitas keamanan tercatat di `/kuasa/audit-logs`:
+
+| Action | Arti |
+| ------ | ---- |
+| `auth.login.success` | Login berhasil |
+| `auth.login.failed` | Login gagal (kredensial atau akun tidak dikenal) |
+| `auth.login.locked_attempt` | Mencoba login pada akun terkunci |
+| `auth.login.role_denied` | Login berhasil tapi role bukan admin |
+| `auth.logout` | Logout |
+| `auth.lockout_triggered` | Akun dikunci sementara (siklus baru) |
+| `auth.permanent_lock` | Akun dikunci permanen |
+| `auth.admin_unlocked` | Admin lain membuka kunci |
+| `admin.user.created` | Admin baru dibuat |
+| `admin.user.deleted` | Admin dihapus |
+
+### Security Setup (Production)
+
+Sebelum go-live, pastikan konfigurasi berikut sudah diterapkan di
+environment produksi:
+
+1. **`APP_DEBUG=false`** — `true` di produksi membocorkan stack trace.
+2. **`APP_URL=https://...`** + reverse-proxy/Cloudflare yang memaksa
+   HTTPS. Aplikasi otomatis memaksa skema `https` saat
+   `APP_ENV=production` (lihat `AppServiceProvider`).
+3. Set di `.env` produksi:
+   ```env
+   SESSION_SECURE_COOKIE=true
+   SESSION_SAME_SITE=strict
+   SESSION_ENCRYPT=true
+   SESSION_LIFETIME=120
+   ```
+4. Generate ulang `APP_KEY` & `QR_SECRET` lewat
+   `php artisan key:generate` (jangan reuse dari repo).
+5. Ganti kredensial admin demo (`admin` / `password`) sebelum go-live.
+   Caranya:
+   ```bash
+   php artisan tinker
+   >>> $u = App\Models\User::where('login_code','admin')->first();
+   >>> $u->password = 'PasswordYangKuat!2026'; // di-hash via cast
+   >>> $u->save();
+   ```
+   Atau login ke `/kuasa`, buat akun admin baru di `/kuasa/admins` dengan
+   password kuat, lalu hapus akun demo via tombol Hapus di tabel admin
+   (sistem mengizinkan hapus selama jumlah admin tetap ≥ 2).
+6. Untuk mekanisme unlock antar-admin, jaga **minimal 2 akun admin
+   aktif**. Tambah admin kedua via `/kuasa/admins` setelah ganti
+   kredensial demo.
+7. Cache config & route di production untuk performa:
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+8. Aplikasi memasang `Content-Security-Policy`, `X-Frame-Options`,
+   `Referrer-Policy`, `Permissions-Policy`, dan `HSTS` (saat HTTPS)
+   secara global via `SecurityHeaders` middleware. Verifikasi via
+   DevTools → Network → Response Headers.
+
+> ⚠️ **Rotasi kredensial DB**: jika Anda meng-clone repo dari versi
+> lama yang pernah memuat kredensial DB di `.env`, anggap kredensial
+> tersebut bocor — segera rotasi password DB dan hapus dari git
+> history (`git filter-repo`).
 
 ---
 

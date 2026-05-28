@@ -27,6 +27,106 @@ class AttendanceService
      */
     public function scan(string $code, int $eventId, string $mode = 'qr'): array
     {
+        $context = $this->resolveScanContext($code, $eventId, $mode);
+
+        /** @var User $student */
+        $student = $context['student'];
+        /** @var Event $event */
+        $event = $context['event'];
+        $now = $context['now'];
+        $status = $context['status'];
+
+        try {
+            $attendance = Attendance::query()->create([
+                'user_id' => $student->getKey(),
+                'event_id' => $event->id,
+                'check_in_time' => $now,
+                'attendance_date' => $now->toDateString(),
+                'status' => $status,
+                'departemen' => $student->profile->departemen,
+            ])->load('user.profile', 'event');
+        } catch (QueryException $exception) {
+            // The DB unique on (user_id, event_id) has been dropped, but
+            // we keep this branch as a safety net for legacy schemas.
+            if ($this->isUniqueViolation($exception)) {
+                throw new DomainException(
+                    $student->profile->nama.' (NIM '.$student->profile->nim.') '
+                    .'sudah tercatat absen di event ini.',
+                    409,
+                );
+            }
+
+            throw $exception;
+        }
+
+        return [
+            'attendance' => $attendance,
+            'message' => 'Absensi berhasil dicatat untuk '.$student->profile->nama.'.',
+        ];
+    }
+
+    /**
+     * Lakukan SEMUA validasi sama seperti scan() — resolve student dari
+     * QR/NIM, cek event scannable, cek departemen match, hitung status
+     * (Hadir/Terlambat), dan cek duplicate — TAPI tidak men-create
+     * record attendance. Dipakai oleh mode "konfirmasi dulu" pada
+     * scanner UI: admin scan -> preview muncul -> admin klik konfirmasi
+     * -> barulah scan() dipanggil.
+     *
+     * @return array{
+     *   would_be_status: string,
+     *   would_be_status_label: string,
+     *   member: array{user_id: int, nama: string, nim: string, departemen: ?string, jabatan: ?string},
+     *   event: array{id: int, nama_kegiatan: string, departemen: ?string, waktu_mulai: ?string, waktu_selesai: ?string, batas_absensi: ?string},
+     *   scan_time: string,
+     *   scan_time_label: string
+     * }
+     *
+     * @throws DomainException jika scan tidak valid (sama mapping HTTP code seperti scan()).
+     */
+    public function previewScan(string $code, int $eventId, string $mode = 'qr'): array
+    {
+        $context = $this->resolveScanContext($code, $eventId, $mode);
+
+        /** @var User $student */
+        $student = $context['student'];
+        /** @var Event $event */
+        $event = $context['event'];
+        $now = $context['now'];
+        $status = $context['status'];
+
+        return [
+            'would_be_status' => $status,
+            'would_be_status_label' => ucfirst($status),
+            'member' => [
+                'user_id' => $student->getKey(),
+                'nama' => $student->profile->nama,
+                'nim' => $student->profile->nim,
+                'departemen' => $student->profile->departemen,
+                'jabatan' => $student->profile->jabatan,
+            ],
+            'event' => [
+                'id' => $event->id,
+                'nama_kegiatan' => $event->nama_kegiatan,
+                'departemen' => $event->departemen,
+                'waktu_mulai' => optional($event->waktu_mulai)->format('H:i'),
+                'waktu_selesai' => optional($event->waktu_selesai)->format('H:i'),
+                'batas_absensi' => optional($event->batas_absensi)->format('H:i'),
+            ],
+            'scan_time' => $now->toIso8601String(),
+            'scan_time_label' => $now->format('H:i:s'),
+        ];
+    }
+
+    /**
+     * Bagian "validasi & resolusi" yang dipakai bersama oleh scan() dan
+     * previewScan(). Mengembalikan student, event, waktu sekarang, dan
+     * status yang akan dicatat — tanpa men-create record.
+     *
+     * @return array{student: User, event: Event, now: \Illuminate\Support\Carbon, status: string}
+     */
+    private function resolveScanContext(string $code, int $eventId, string $mode): array
+    {
         $trimmed = trim($code);
 
         if ($trimmed === '') {
@@ -91,32 +191,11 @@ class AttendanceService
             );
         }
 
-        try {
-            $attendance = Attendance::query()->create([
-                'user_id' => $student->getKey(),
-                'event_id' => $event->id,
-                'check_in_time' => $now,
-                'attendance_date' => $now->toDateString(),
-                'status' => $status,
-                'departemen' => $student->profile->departemen,
-            ])->load('user.profile', 'event');
-        } catch (QueryException $exception) {
-            // The DB unique on (user_id, event_id) has been dropped, but
-            // we keep this branch as a safety net for legacy schemas.
-            if ($this->isUniqueViolation($exception)) {
-                throw new DomainException(
-                    $student->profile->nama.' (NIM '.$student->profile->nim.') '
-                    .'sudah tercatat absen di event ini.',
-                    409,
-                );
-            }
-
-            throw $exception;
-        }
-
         return [
-            'attendance' => $attendance,
-            'message' => 'Absensi berhasil dicatat untuk '.$student->profile->nama.'.',
+            'student' => $student,
+            'event' => $event,
+            'now' => $now,
+            'status' => $status,
         ];
     }
 

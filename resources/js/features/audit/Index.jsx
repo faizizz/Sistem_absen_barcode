@@ -20,12 +20,61 @@ const TONE = {
     'member.create': 'accent',
     'member.update': 'info',
     'member.delete': 'danger',
+    'member.qr_activate': 'brand',
     'attendance.scan': 'success',
     'attendance.permission': 'info',
     'attendance.mark_alpha': 'danger',
     'attendance.reset': 'warning',
     'attendance.export': 'accent',
+    'auth.login.success': 'success',
+    'auth.login.failed': 'danger',
+    'auth.login.locked_attempt': 'warning',
+    'auth.login.role_denied': 'danger',
+    'auth.logout': 'neutral',
+    'auth.lockout_triggered': 'warning',
+    'auth.permanent_lock': 'critical',
+    'auth.admin_unlocked': 'success',
+    'auth.password_changed': 'info',
+    'admin.user.created': 'brand',
+    'admin.user.deleted': 'danger',
 };
+
+/**
+ * Mapping label Indonesian untuk action audit log. Jika action tidak
+ * ada di mapping, fallback ke value mentah (mis. action baru yang
+ * belum dilabeli).
+ */
+const ACTION_LABEL = {
+    'event.create': 'Buat Event',
+    'event.update': 'Ubah Event',
+    'event.delete': 'Hapus Event',
+    'event.activate': 'Aktifkan Event',
+    'event.close': 'Tutup Event',
+    'member.create': 'Tambah Anggota',
+    'member.update': 'Ubah Anggota',
+    'member.delete': 'Hapus Anggota',
+    'member.qr_activate': 'Aktivasi QR',
+    'attendance.scan': 'Scan Absensi',
+    'attendance.permission': 'Catat Izin/Sakit',
+    'attendance.mark_alpha': 'Tandai Alpha',
+    'attendance.reset': 'Reset Absensi',
+    'attendance.export': 'Ekspor Absensi',
+    'auth.login.success': 'Login Berhasil',
+    'auth.login.failed': 'Login Gagal',
+    'auth.login.locked_attempt': 'Login pada Akun Terkunci',
+    'auth.login.role_denied': 'Login Ditolak (Bukan Admin)',
+    'auth.logout': 'Logout',
+    'auth.lockout_triggered': 'Akun Dikunci Sementara',
+    'auth.permanent_lock': 'Akun Dikunci Permanen',
+    'auth.admin_unlocked': 'Akun Dibuka oleh Admin',
+    'auth.password_changed': 'Password Diganti',
+    'admin.user.created': 'Admin Baru Dibuat',
+    'admin.user.deleted': 'Admin Dihapus',
+};
+
+function actionLabel(action) {
+    return ACTION_LABEL[action] ?? action;
+}
 
 export default function AuditIndex({ logs, actions, filters }) {
     const [action, setAction] = useState(filters?.action ?? '');
@@ -60,7 +109,7 @@ export default function AuditIndex({ logs, actions, filters }) {
 
     const actionOptions = [
         { value: '', label: 'Semua aksi' },
-        ...actions.map((a) => ({ value: a, label: a })),
+        ...actions.map((a) => ({ value: a, label: actionLabel(a) })),
     ];
 
     const columns = [
@@ -72,7 +121,7 @@ export default function AuditIndex({ logs, actions, filters }) {
         {
             key: 'action',
             label: 'Aksi',
-            render: (l) => <Badge tone={TONE[l.action] ?? 'neutral'} size="sm">{l.action}</Badge>,
+            render: (l) => <Badge tone={TONE[l.action] ?? 'neutral'} size="sm">{actionLabel(l.action)}</Badge>,
         },
         {
             key: 'description',
@@ -103,7 +152,7 @@ export default function AuditIndex({ logs, actions, filters }) {
                             {l.created_at} · {l.actor}
                         </p>
                     </div>
-                    <Badge tone={TONE[l.action] ?? 'neutral'} size="sm">{l.action}</Badge>
+                    <Badge tone={TONE[l.action] ?? 'neutral'} size="sm">{actionLabel(l.action)}</Badge>
                 </div>
                 {l.metadata && (
                     <button
