@@ -14,9 +14,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Headers yang dipasang:
  *   - Content-Security-Policy
  *       Mode dev (`local`): mengizinkan 'unsafe-inline'/'unsafe-eval'/
- *       blob/ws untuk Vite HMR. Mode production: ketat — script dari
- *       'self' saja (Vite di production sudah di-bundle), style boleh
- *       inline (Tailwind 4 sering inline-kan utility CSS).
+ *       blob/ws dan origin Vite untuk HMR. Mode production: script dari
+ *       'self' saja (Vite di production sudah di-bundle). Google Fonts
+ *       diizinkan karena layout memuatnya dari CDN.
  *   - X-Frame-Options: DENY  → blok clickjacking via iframe
  *   - X-Content-Type-Options: nosniff → blok MIME sniffing
  *   - Referrer-Policy: strict-origin-when-cross-origin
@@ -73,6 +73,17 @@ class SecurityHeaders
      */
     protected function contentSecurityPolicy(bool $isProduction): string
     {
+        $styleSources = [
+            "'self'",
+            "'unsafe-inline'",
+            'https://fonts.googleapis.com',
+        ];
+
+        if (! $isProduction) {
+            $styleSources[] = 'http://localhost:5800';
+            $styleSources[] = 'http://127.0.0.1:5800';
+        }
+
         $directives = [
             "default-src 'self'",
             "base-uri 'self'",
@@ -80,10 +91,10 @@ class SecurityHeaders
             "frame-ancestors 'none'",
             "object-src 'none'",
             "img-src 'self' data: blob:",
-            "font-src 'self' data:",
+            "font-src 'self' data: https://fonts.gstatic.com",
             // Tailwind 4 + utilities dapat menanam inline style; ini umum
             // diizinkan dengan 'unsafe-inline' di style-src walau di prod.
-            "style-src 'self' 'unsafe-inline'",
+            'style-src ' . implode(' ', $styleSources),
         ];
 
         if ($isProduction) {
@@ -93,8 +104,10 @@ class SecurityHeaders
             $directives[] = "connect-src 'self'";
         } else {
             // Dev: Vite HMR butuh eval (untuk transform), inline boot
-            // script, dan ws/blob untuk hot-reload.
-            $directives[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:";
+            // script, ws/blob untuk hot-reload, dan origin dev server.
+            $viteDevOrigins = 'http://localhost:5800 http://127.0.0.1:5800';
+
+            $directives[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: {$viteDevOrigins}";
             $directives[] = "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*";
         }
 

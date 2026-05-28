@@ -14,11 +14,11 @@ import { cn } from '@/lib/cn';
  *
  * Focus state — `text-input-focused`:
  *   - border `2px solid {colors.fb-blue}`
- *   - we compensate the extra 1px with a -1px padding shrink so the
- *     control's overall box doesn't jitter on focus.
+ *   - padding is left untouched so icon-prefixed fields can keep their
+ *     caller-provided `pl-*` / `pr-*` spacing while focused.
  */
 const base =
-    'block w-full h-11 rounded-[var(--radius-lg)] border border-[color:var(--hairline)] bg-[color:var(--canvas)] px-3 py-3 text-base [letter-spacing:-0.16px] text-[color:var(--ink)] placeholder:text-[color:var(--steel)] transition-colors duration-150 focus:outline-none focus:border-[color:var(--fb-blue)] focus:border-2 focus:px-[11px] focus:py-[11px] disabled:opacity-60 disabled:cursor-not-allowed';
+    'block w-full h-11 rounded-[var(--radius-lg)] border border-[color:var(--hairline)] bg-[color:var(--canvas)] px-3 py-3 text-base [letter-spacing:-0.16px] text-[color:var(--ink)] placeholder:text-[color:var(--steel)] transition-colors duration-150 focus:outline-none focus:border-[color:var(--fb-blue)] focus:border-2 disabled:opacity-60 disabled:cursor-not-allowed';
 
 export const Input = forwardRef(function Input({ className, type = 'text', ...props }, ref) {
     return <input ref={ref} type={type} className={cn(base, className)} {...props} />;
